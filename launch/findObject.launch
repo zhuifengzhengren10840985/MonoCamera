@@ -1,0 +1,6 @@
+<launch>
+    <group ns="object">
+        <node pkg="MonoCamera"  name="sub_and_pub"   type="MonoCamera"  output="screen"/>
+    </group>
+</launch>
+

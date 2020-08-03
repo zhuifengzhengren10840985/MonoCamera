@@ -1,0 +1,2 @@
+int16 object_number
+geometry_msgs/Point object_position

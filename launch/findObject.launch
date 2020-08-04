@@ -1,6 +1,6 @@
 <launch>
-    <group ns="object">
-        <node pkg="MonoCamera"  name="sub_and_pub"   type="MonoCamera"  output="screen"/>
-    </group>
+    <arg name="uav_id" default="0"/>
+    <arg name="namespace" value="$(eval 'uav' + str(arg('uav_id')))"/>
+    <node pkg="MonoCamera" type="MonoCamera" name="sub_and_pub" output="screen" ns="$(arg namespace)"/>
 </launch>
 

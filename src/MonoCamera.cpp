@@ -181,7 +181,7 @@ SubAndPub::SubAndPub()
     //指定发布者往object_pub这个话题上发布MonoCamera::object类型的数据
     pub_ = nh_.advertise<MonoCamera::object>("object_pub", 1);
     //指定订阅者从/mavros/local_position/pose这个话题上订阅geometry_msgs::PoseStamped类型的数据
-    sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, &SubAndPub::poseCallback, this);;
+    sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, &SubAndPub::poseCallback, this);//话题前面不加/表示相对命名空间,加了表示全局命名空间
 }
 //订阅无人机位姿信息的回调函数,利用这些信息求出目标世界坐标,将目标信息发布出去
 void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)

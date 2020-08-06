@@ -22,15 +22,32 @@ double depth[J_N] = {300,300,300,300};
 //牛顿迭代的初值(深度Z的初值)
 double x_start[J_N] = {300,300,300,300};
 
-const int max_value_H1 = 180/2-1;
-const int max_value_H2 = 360/2;//因为是以8位存储，所以除以2
-const int max_value = 255;//H：0~180, S和V：0-255
-
 const cv::String window_capture_name = "Video Capture";
-const cv::String window_detection_name = "Object Detection";
+const cv::String NumberDetection = "Number Detection";
+const cv::String SquareDetection = "Square Detection";
 
-int low_H1 = 0, low_H2 = max_value_H1+1, low_S = 0, low_V = 0;
-int high_H1= max_value_H1, high_H2= max_value_H2, high_S= max_value, high_V = max_value;
+//数字检测的滑动条
+int low_H_white = 0, 
+       high_H_white = 180, 
+
+       low_S_white = 0, 
+       high_S_white = 255, 
+
+       low_V_white = 0,
+       high_V_white = 255;
+
+//边框检测的滑动条
+int low_H_red1 = 0, 
+       high_H_red1 = 89, 
+
+       low_H_red2 = 90, 
+       high_H_red2 = 180, 
+
+       low_S_red = 0, 
+       high_S_red = 255, 
+
+       low_V_red = 0,
+       high_V_red = 255;
 
 //匹配数字
  int serise_num = 1;
@@ -45,49 +62,82 @@ Eigen::Vector3d t_Euler;
 //顶点及中心点的世界坐标
 Eigen::Vector3d P_world1, P_world2, P_world3, P_world4, P_worldcentral;
 
-/////////////////////////////滑动条///////////////////////////
-static void on_low_H1_thresh_trackbar(int, void *)
+///////////////////////////////滑动条1///////////////////////////////
+static void on_low_H_thresh_trackbar1(int, void *)
 {
-    low_H1 = std::min(high_H1-1, low_H1);//防止最大值小于最小值
-	cv::setTrackbarPos("Low H1", window_detection_name, low_H1);
+    low_H_white = std::min(high_H_white-1, low_H_white);//防止最大值小于最小值
+	cv::setTrackbarPos("Low H", NumberDetection, low_H_white);
 }
-static void on_high_H1_thresh_trackbar(int, void *)
+static void on_high_H_thresh_trackbar1(int, void *)
 {
-    high_H1 = std::max(high_H1, low_H1+1);
-	setTrackbarPos("High H1", window_detection_name, high_H1);
-}
-
-static void on_low_H2_thresh_trackbar(int, void *)
-{
-    low_H2 = std::min(high_H2-1, low_H2);
-	cv::setTrackbarPos("Low H2", window_detection_name, low_H2);
-}
-static void on_high_H2_thresh_trackbar(int, void *)
-{
-    high_H2 = std::max(high_H2, low_H2+1);
-	setTrackbarPos("High H2", window_detection_name, high_H2);
+    high_H_white = std::max(high_H_white, low_H_white+1);
+	setTrackbarPos("High H", NumberDetection, high_H_white);
 }
 
-static void on_low_S_thresh_trackbar(int, void *)
+static void on_low_S_thresh_trackbar1(int, void *)
 {
-    low_S = std::min(high_S-1, low_S);
-	setTrackbarPos("Low S",window_detection_name,low_S);
+    low_S_white = std::min(high_S_white-1, low_S_white);
+	setTrackbarPos("Low S",NumberDetection,low_S_white);
 }
-static void on_high_S_thresh_trackbar(int, void *)
+static void on_high_S_thresh_trackbar1(int, void *)
 {
-    high_S = std::max(high_S,low_S+1);
-	setTrackbarPos("High S",window_detection_name,high_S);
+    high_S_white = std::max(high_S_white,low_S_white+1);
+	setTrackbarPos("High S",NumberDetection,high_S_white);
 }
 
-static void on_low_V_thresh_trackbar(int, void *)
+static void on_low_V_thresh_trackbar1(int, void *)
 {
-    low_V = std::min(high_V-1, low_V);
-	setTrackbarPos("Low V",window_detection_name,low_V);
+    low_V_white = std::min(high_V_white-1, low_V_white);
+	setTrackbarPos("Low V",NumberDetection,low_V_white);
 }
-static void on_high_V_thresh_trackbar(int, void *)
+static void on_high_V_thresh_trackbar1(int, void *)
 {
-    high_V = std::max(high_V,low_V+1);
-	setTrackbarPos("High V",window_detection_name,high_V);
+    high_V_white = std::max(high_V_white,low_V_white+1);
+	setTrackbarPos("High V",NumberDetection,high_V_white);
+}
+/////////////////////////////滑动条2///////////////////////////
+static void on_low_H1_thresh_trackbar2(int, void *)
+{
+    low_H_red1 = std::min(high_H_red1-1, low_H_red1);//防止最大值小于最小值
+	cv::setTrackbarPos("Low H1", SquareDetection, low_H_red1);
+}
+static void on_high_H1_thresh_trackbar2(int, void *)
+{
+    high_H_red1 = std::max(high_H_red1, low_H_red1+1);
+	setTrackbarPos("High H1", SquareDetection, high_H_red1);
+}
+
+static void on_low_H2_thresh_trackbar2(int, void *)
+{
+    low_H_red2 = std::min(high_H_red2-1, low_H_red2);
+	cv::setTrackbarPos("Low H2", SquareDetection, low_H_red2);
+}
+static void on_high_H2_thresh_trackbar2(int, void *)
+{
+    high_H_red2 = std::max(high_H_red2, low_H_red2+1);
+	setTrackbarPos("High H2", SquareDetection, high_H_red2);
+}
+
+static void on_low_S_thresh_trackbar2(int, void *)
+{
+    low_S_red = std::min(high_S_red-1, low_S_red);
+	setTrackbarPos("Low S",SquareDetection,low_S_red);
+}
+static void on_high_S_thresh_trackbar2(int, void *)
+{
+    high_S_red = std::max(high_S_red,low_S_red+1);
+	setTrackbarPos("High S",SquareDetection,high_S_red);
+}
+
+static void on_low_V_thresh_trackbar2(int, void *)
+{
+    low_V_red = std::min(high_V_red-1, low_V_red);
+	setTrackbarPos("Low V",SquareDetection,low_V_red);
+}
+static void on_high_V_thresh_trackbar2(int, void *)
+{
+    high_V_red = std::max(high_V_red,low_V_red+1);
+	setTrackbarPos("High V",SquareDetection,high_V_red);
 }
 
 ////////////////////////两幅图像相减////////////////////////
@@ -231,7 +281,7 @@ int main(int argc, char **argv)
 
     //原始,灰度,hsv,颜色分割图像
     cv::Mat image_raw, image_gray, image_hsv;
-    cv::Mat image_threshold_white1, image_threshold_white2, image_threshold_white;
+    cv::Mat image_threshold_white;
     cv::Mat image_threshold_red1, image_threshold_red2, image_threshold_red;
 
     //启动编号为0的相机
@@ -244,21 +294,6 @@ int main(int argc, char **argv)
             std::cout << "Cannot open the cam!" << std::endl;
             return -1;
         }
-
-        //HSV阈值调节窗口
-        // namedWindow(window_detection_name);
-
-        // createTrackbar("Low H1", window_detection_name, &low_H1, max_value_H1, on_low_H1_thresh_trackbar);
-        // createTrackbar("High H1", window_detection_name, &high_H1, max_value_H1, on_high_H1_thresh_trackbar);
-
-        // createTrackbar("Low H2", window_detection_name, &low_H2, max_value_H2, on_low_H2_thresh_trackbar);
-        // createTrackbar("High H2", window_detection_name, &high_H2, max_value_H2, on_high_H2_thresh_trackbar);
-
-        // createTrackbar("Low S", window_detection_name, &low_S, max_value, on_low_S_thresh_trackbar);
-        // createTrackbar("High S", window_detection_name, &high_S, max_value, on_high_S_thresh_trackbar);
-
-        // createTrackbar("Low V", window_detection_name, &low_V, max_value, on_low_V_thresh_trackbar);
-        // createTrackbar("High V", window_detection_name, &high_V, max_value, on_high_V_thresh_trackbar);
 
         try{
             while(1){
@@ -278,105 +313,133 @@ int main(int argc, char **argv)
 
 
 /////////////////////////////////////////////////////////////////////检测数字区域/////////////////////////////////////////////////////////////////////////
-                // //进行颜色分割，输出图像为CV_8UC1
-                // cv::inRange(image_hsv, cv::Scalar(low_H1,low_S,low_V), cv::Scalar(high_H1,high_S,high_V), image_threshold_white1);
-                // cv::inRange(image_hsv, cv::Scalar(low_H2,low_S,low_V), cv::Scalar(high_H2,high_S,high_V), image_threshold_white2);
-                // cv::bitwise_or(image_threshold_white1, image_threshold_white2, image_threshold_white);
+                //数字检测HSV阈值调节窗口
+                namedWindow(NumberDetection);
 
-                // //形态学运算，先腐蚀erode再膨胀dilate
-                // cv::Mat image_erode, image_dilate;
-                // cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
-                // cv::erode(image_threshold_white, image_erode, kernel);
-                // cv::dilate(image_erode, image_dilate, kernel);
-                // cv::imshow(window_detection_name, image_dilate);
+                createTrackbar("Low H", NumberDetection, &low_H_white, 180, on_low_H_thresh_trackbar1);
+                createTrackbar("High H", NumberDetection, &high_H_white, 180, on_high_H_thresh_trackbar1);
 
-                // //寻找轮廓
-                // std::vector<std::vector<cv::Point> > contours;
-                // std::vector<cv::Vec4i> hierarchy;
-                // cv::findContours(image_dilate, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+                createTrackbar("Low S", NumberDetection, &low_S_white, 255, on_low_S_thresh_trackbar1);
+                createTrackbar("High S", NumberDetection, &high_S_white, 255, on_high_S_thresh_trackbar1);
 
-                // //画轮廓
-                // cv::Mat image_contours(image_raw.size(), CV_8UC3, cv::Scalar(0,0,0));
+                createTrackbar("Low V", NumberDetection, &low_V_white, 255, on_low_V_thresh_trackbar1);
+                createTrackbar("High V", NumberDetection, &high_V_white, 255, on_high_V_thresh_trackbar1);
+                
+                //进行颜色分割，输出图像为CV_8UC1
+                cv::inRange(image_hsv, cv::Scalar(low_H_white, low_S_white, low_V_white), cv::Scalar(high_H_white,high_S_white,high_V_white), image_threshold_white);
 
-                // //检测不到轮廓的话就退出本次循环
-                // if(contours.empty())
-                //     continue;
+                //形态学运算，先腐蚀erode再膨胀dilate
+                cv::Mat image_erode, image_dilate;
+                cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
+                cv::erode(image_threshold_white, image_erode, kernel);
+                cv::dilate(image_erode, image_dilate, kernel);
+                cv::imshow(NumberDetection, image_dilate);
 
-                // //取外轮廓squares, 其中有多个轮廓，每个轮廓含有很多个点
-                // std::vector<std::vector<cv::Point> > squares;
-                // std::list<int> len_list;
+                //寻找轮廓
+                std::vector<std::vector<cv::Point> > contours;
+                std::vector<cv::Vec4i> hierarchy;
+                cv::findContours(image_dilate, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
-                // //计算每个轮廓的面积
-                // for (int i = 0; i < contours.size(); i++){
-                //     len_list.push_back(cv::contourArea(contours[i]));
-                // }
+                //画轮廓
+                cv::Mat image_contours(image_raw.size(), CV_8UC3, cv::Scalar(0,0,0));
 
-                // //寻找面积最大的轮廓
-                // if (len_list.size() > 0){
-                //     squares.push_back(contours[std::distance(len_list.begin(), max_element(len_list.begin(), len_list.end()))]);
-                // }
+                //检测不到轮廓的话就退出本次循环
+                if(contours.empty())
+                    continue;
 
-                // //最小外接矩形集合box
-                // std::vector<cv::RotatedRect> box(squares.size());
-                // std::vector<cv::Rect> srcRect(squares.size());
-                // cv::Mat image_raw_copy = image_raw;
+                //取外轮廓squares, 其中有多个轮廓，每个轮廓含有很多个点
+                std::vector<std::vector<cv::Point> > squares;
+                std::list<int> len_list;
 
-                // for(int i = 0; i < squares.size(); i++){
-                //     srcRect[i] = cv::boundingRect(squares[i]);
-                //     //计算轮廓i的最小外接矩形
-                //     box[i] = cv::minAreaRect(cv::Mat(squares[i]));
-                //     //绘制最小外接矩形的中心点
-                //     cv::circle(image_raw_copy, cv::Point(box[i].center.x, box[i].center.y), 1, cv::Scalar(255, 0, 0), -1, 8); 
-                // }
+                //计算每个轮廓的面积
+                for (int i = 0; i < contours.size(); i++){
+                    len_list.push_back(cv::contourArea(contours[i]));
+                }
 
-                // cv::Point2f rect1[4];//外接正方形的四个顶点
+                //寻找面积最大的轮廓
+                if (len_list.size() > 0){
+                    squares.push_back(contours[std::distance(len_list.begin(), max_element(len_list.begin(), len_list.end()))]);
+                }
 
-                // rect1[0].x = box[0].center.x - srcRect[0].height/2;
-                // rect1[0].y = box[0].center.y - srcRect[0].height/2;//左上角顶点
+                //最小外接矩形集合box
+                std::vector<cv::RotatedRect> box(squares.size());
+                std::vector<cv::Rect> srcRect(squares.size());
+                cv::Mat image_raw_copy = image_raw;
 
-                // rect1[1].x = box[0].center.x + srcRect[0].height/2;
-                // rect1[1].y = box[0].center.y -  srcRect[0].height/2;//右上角顶点
+                for(int i = 0; i < squares.size(); i++){
+                    srcRect[i] = cv::boundingRect(squares[i]);
+                    //计算轮廓i的最小外接矩形
+                    box[i] = cv::minAreaRect(cv::Mat(squares[i]));
+                    //绘制最小外接矩形的中心点
+                    cv::circle(image_raw_copy, cv::Point(box[i].center.x, box[i].center.y), 1, cv::Scalar(255, 0, 0), -1, 8); 
+                }
 
-                // rect1[2].x = box[0].center.x + srcRect[0].height/2;
-                // rect1[2].y = box[0].center.y + srcRect[0].height/2;//右下角顶点
+                cv::Point2f rect1[4];//外接正方形的四个顶点
 
-                // rect1[3].x = box[0].center.x - srcRect[0].height/2;
-                // rect1[3].y = box[0].center.y + srcRect[0].height/2;//左下角顶点
+                rect1[0].x = box[0].center.x - srcRect[0].height/2;
+                rect1[0].y = box[0].center.y - srcRect[0].height/2;//左上角顶点
 
-                // cv::circle(image_raw_copy, rect1[0], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左上角顶点
-                // cv::circle(image_raw_copy, rect1[1], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右上角顶点
-                // cv::circle(image_raw_copy, rect1[2], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右下角顶点
-                // cv::circle(image_raw_copy, rect1[3], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左下角顶点
+                rect1[1].x = box[0].center.x + srcRect[0].height/2;
+                rect1[1].y = box[0].center.y -  srcRect[0].height/2;//右上角顶点
 
-                // //绘制最小外接正方形的每条边
-                // for(int i = 0; i < 4; i++)
-                //     line(image_raw_copy, rect1[i], rect1[(i+1)%4], cv::Scalar(255, 0, 0), 2, 8);
+                rect1[2].x = box[0].center.x + srcRect[0].height/2;
+                rect1[2].y = box[0].center.y + srcRect[0].height/2;//右下角顶点
 
-                // //抠取出数字区域的二值图像
-                // cv::Mat roi;
-                // roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
-                // //cv::imshow("resizeRoi", roi);
-                // cv::resize(roi, roi, cv::Size(50, 50));
-                // cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/test.jpg", roi);
+                rect1[3].x = box[0].center.x - srcRect[0].height/2;
+                rect1[3].y = box[0].center.y + srcRect[0].height/2;//左下角顶点
 
-                // roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
-                // //模板匹配识别数字
-                // serise_num = temple_image(roi);
-                // std::cout << "serise_num:  " << serise_num << std::endl;
+                cv::circle(image_raw_copy, rect1[0], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左上角顶点
+                cv::circle(image_raw_copy, rect1[1], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右上角顶点
+                cv::circle(image_raw_copy, rect1[2], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右下角顶点
+                cv::circle(image_raw_copy, rect1[3], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左下角顶点
+
+                //绘制最小外接正方形的每条边
+                for(int i = 0; i < 4; i++)
+                    line(image_raw_copy, rect1[i], rect1[(i+1)%4], cv::Scalar(255, 0, 0), 2, 8);
+
+                //抠取出数字区域的二值图像
+                cv::Mat roi;
+                roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
+                //cv::imshow("resizeRoi", roi);
+                cv::resize(roi, roi, cv::Size(50, 50));
+                cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg", roi);
+
+                roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
+                //模板匹配识别数字
+                serise_num = temple_image(roi);
+                std::cout << "serise_num:  " << serise_num << std::endl;
 
 
-///////////////////////////////////////////////////////////////////检测红色门框////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////检测红色边框////////////////////////////////////////////////////////////////////
+                //边框检测HSV阈值调节窗口
+                namedWindow(SquareDetection);
+
+                createTrackbar("Low H1", SquareDetection, &low_H_red1, 89, on_low_H1_thresh_trackbar2);
+                createTrackbar("High H1", SquareDetection, &high_H_red1, 89, on_high_H1_thresh_trackbar2);
+
+                createTrackbar("Low H2", SquareDetection, &low_H_red2, 180, on_low_H2_thresh_trackbar2);
+                createTrackbar("High H2", SquareDetection, &high_H_red2, 180, on_high_H2_thresh_trackbar2);
+
+                createTrackbar("Low S", SquareDetection, &low_S_red, 255, on_low_S_thresh_trackbar2);
+                createTrackbar("High S", SquareDetection, &high_S_red, 255, on_high_S_thresh_trackbar2);
+
+                createTrackbar("Low V", SquareDetection, &low_V_red, 255, on_low_V_thresh_trackbar2);
+                createTrackbar("High V", SquareDetection, &high_V_red, 255, on_high_V_thresh_trackbar2);
+                
                 //颜色分割出红色,得到二值图像image_threshold_red
-                cv::inRange(image_hsv, cv::Scalar(0, 43, 46), cv::Scalar(10, 255, 255), image_threshold_red1);
-                cv::inRange(image_hsv, cv::Scalar(156, 43, 46), cv::Scalar(180, 255, 255), image_threshold_red2);
+                // cv::inRange(image_hsv, cv::Scalar(0, 43, 46), cv::Scalar(10, 255, 255), image_threshold_red1);
+                // cv::inRange(image_hsv, cv::Scalar(156, 43, 46), cv::Scalar(180, 255, 255), image_threshold_red2);
+                // cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
+                cv::inRange(image_hsv, cv::Scalar(low_H_red1,low_S_red,low_V_red), cv::Scalar(high_H_red1,high_S_red,high_V_red), image_threshold_red1);
+                cv::inRange(image_hsv, cv::Scalar(low_H_red2,low_S_red,low_V_red), cv::Scalar(high_H_red2,high_S_red,high_V_red), image_threshold_red2);
                 cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
 
                 //形态学运算，先腐蚀(erode)再膨胀(dilate)
                 cv::Mat image_erode1, image_dilate1;
-                cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
-                cv::erode(image_threshold_red, image_erode1, kernel);
-                cv::dilate(image_erode1, image_dilate1, kernel);
-                cv::imshow("red image", image_dilate1);
+                cv::Mat kernel1 = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
+                cv::erode(image_threshold_red, image_erode1, kernel1);
+                cv::dilate(image_erode1, image_dilate1, kernel1);
+                cv::imshow(SquareDetection, image_dilate1);
 
                 //寻找轮廓
                 std::vector<std::vector<cv::Point> > contours1;

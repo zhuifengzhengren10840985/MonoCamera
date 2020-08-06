@@ -17,7 +17,8 @@
 //#define Epsilon 35
 #define Max 15
 const int N2 = 2 * J_N;
-double x0[J_N] = {300,300,300,300};
+//深度值
+double depth[J_N] = {300,300,300,300};
 //牛顿迭代的初值(深度Z的初值)
 double x_start[J_N] = {300,300,300,300};
 
@@ -229,7 +230,9 @@ int main(int argc, char **argv)
     SubAndPub SAPObject;
 
     //原始,灰度,hsv,颜色分割图像
-    cv::Mat image_raw, image_gray, image_hsv, image_threshold1, image_threshold2, image_threshold;
+    cv::Mat image_raw, image_gray, image_hsv;
+    cv::Mat image_threshold_white1, image_threshold_white2, image_threshold_white;
+    cv::Mat image_threshold_red1, image_threshold_red2, image_threshold_red;
 
     //启动编号为0的相机
     cv::VideoCapture cap(0);
@@ -243,20 +246,19 @@ int main(int argc, char **argv)
         }
 
         //HSV阈值调节窗口
-        namedWindow(window_capture_name);
-        namedWindow(window_detection_name);
+        // namedWindow(window_detection_name);
 
-        createTrackbar("Low H1", window_detection_name, &low_H1, max_value_H1, on_low_H1_thresh_trackbar);
-        createTrackbar("High H1", window_detection_name, &high_H1, max_value_H1, on_high_H1_thresh_trackbar);
+        // createTrackbar("Low H1", window_detection_name, &low_H1, max_value_H1, on_low_H1_thresh_trackbar);
+        // createTrackbar("High H1", window_detection_name, &high_H1, max_value_H1, on_high_H1_thresh_trackbar);
 
-        createTrackbar("Low H2", window_detection_name, &low_H2, max_value_H2, on_low_H2_thresh_trackbar);
-        createTrackbar("High H2", window_detection_name, &high_H2, max_value_H2, on_high_H2_thresh_trackbar);
+        // createTrackbar("Low H2", window_detection_name, &low_H2, max_value_H2, on_low_H2_thresh_trackbar);
+        // createTrackbar("High H2", window_detection_name, &high_H2, max_value_H2, on_high_H2_thresh_trackbar);
 
-        createTrackbar("Low S", window_detection_name, &low_S, max_value, on_low_S_thresh_trackbar);
-        createTrackbar("High S", window_detection_name, &high_S, max_value, on_high_S_thresh_trackbar);
+        // createTrackbar("Low S", window_detection_name, &low_S, max_value, on_low_S_thresh_trackbar);
+        // createTrackbar("High S", window_detection_name, &high_S, max_value, on_high_S_thresh_trackbar);
 
-        createTrackbar("Low V", window_detection_name, &low_V, max_value, on_low_V_thresh_trackbar);
-        createTrackbar("High V", window_detection_name, &high_V, max_value, on_high_V_thresh_trackbar);
+        // createTrackbar("Low V", window_detection_name, &low_V, max_value, on_low_V_thresh_trackbar);
+        // createTrackbar("High V", window_detection_name, &high_V, max_value, on_high_V_thresh_trackbar);
 
         try{
             while(1){
@@ -267,131 +269,226 @@ int main(int argc, char **argv)
                 if(image_raw.empty())
                     break;
 
-                //显示原始图像
-                cv::imshow(window_capture_name, image_raw);
+                // //显示原始图像
+                // namedWindow(window_capture_name);
+                // cv::imshow(window_capture_name, image_raw);
 
                 //颜色空间转换
                 cv::cvtColor(image_raw, image_hsv, cv::COLOR_BGR2HSV);  
 
-                //进行颜色分割，输出图像为CV_8UC1
-                cv::inRange(image_hsv, cv::Scalar(low_H1,low_S,low_V), cv::Scalar(high_H1,high_S,high_V), image_threshold1);
-                cv::inRange(image_hsv, cv::Scalar(low_H2,low_S,low_V), cv::Scalar(high_H2,high_S,high_V), image_threshold2);
-                cv::bitwise_or(image_threshold1, image_threshold2, image_threshold);
 
-                //形态学运算，腐蚀膨胀
-                cv::Mat image_erode, image_dilate;
+/////////////////////////////////////////////////////////////////////检测数字区域/////////////////////////////////////////////////////////////////////////
+                // //进行颜色分割，输出图像为CV_8UC1
+                // cv::inRange(image_hsv, cv::Scalar(low_H1,low_S,low_V), cv::Scalar(high_H1,high_S,high_V), image_threshold_white1);
+                // cv::inRange(image_hsv, cv::Scalar(low_H2,low_S,low_V), cv::Scalar(high_H2,high_S,high_V), image_threshold_white2);
+                // cv::bitwise_or(image_threshold_white1, image_threshold_white2, image_threshold_white);
+
+                // //形态学运算，先腐蚀erode再膨胀dilate
+                // cv::Mat image_erode, image_dilate;
+                // cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
+                // cv::erode(image_threshold_white, image_erode, kernel);
+                // cv::dilate(image_erode, image_dilate, kernel);
+                // cv::imshow(window_detection_name, image_dilate);
+
+                // //寻找轮廓
+                // std::vector<std::vector<cv::Point> > contours;
+                // std::vector<cv::Vec4i> hierarchy;
+                // cv::findContours(image_dilate, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+
+                // //画轮廓
+                // cv::Mat image_contours(image_raw.size(), CV_8UC3, cv::Scalar(0,0,0));
+
+                // //检测不到轮廓的话就退出本次循环
+                // if(contours.empty())
+                //     continue;
+
+                // //取外轮廓squares, 其中有多个轮廓，每个轮廓含有很多个点
+                // std::vector<std::vector<cv::Point> > squares;
+                // std::list<int> len_list;
+
+                // //计算每个轮廓的面积
+                // for (int i = 0; i < contours.size(); i++){
+                //     len_list.push_back(cv::contourArea(contours[i]));
+                // }
+
+                // //寻找面积最大的轮廓
+                // if (len_list.size() > 0){
+                //     squares.push_back(contours[std::distance(len_list.begin(), max_element(len_list.begin(), len_list.end()))]);
+                // }
+
+                // //最小外接矩形集合box
+                // std::vector<cv::RotatedRect> box(squares.size());
+                // std::vector<cv::Rect> srcRect(squares.size());
+                // cv::Mat image_raw_copy = image_raw;
+
+                // for(int i = 0; i < squares.size(); i++){
+                //     srcRect[i] = cv::boundingRect(squares[i]);
+                //     //计算轮廓i的最小外接矩形
+                //     box[i] = cv::minAreaRect(cv::Mat(squares[i]));
+                //     //绘制最小外接矩形的中心点
+                //     cv::circle(image_raw_copy, cv::Point(box[i].center.x, box[i].center.y), 1, cv::Scalar(255, 0, 0), -1, 8); 
+                // }
+
+                // cv::Point2f rect1[4];//外接正方形的四个顶点
+
+                // rect1[0].x = box[0].center.x - srcRect[0].height/2;
+                // rect1[0].y = box[0].center.y - srcRect[0].height/2;//左上角顶点
+
+                // rect1[1].x = box[0].center.x + srcRect[0].height/2;
+                // rect1[1].y = box[0].center.y -  srcRect[0].height/2;//右上角顶点
+
+                // rect1[2].x = box[0].center.x + srcRect[0].height/2;
+                // rect1[2].y = box[0].center.y + srcRect[0].height/2;//右下角顶点
+
+                // rect1[3].x = box[0].center.x - srcRect[0].height/2;
+                // rect1[3].y = box[0].center.y + srcRect[0].height/2;//左下角顶点
+
+                // cv::circle(image_raw_copy, rect1[0], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左上角顶点
+                // cv::circle(image_raw_copy, rect1[1], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右上角顶点
+                // cv::circle(image_raw_copy, rect1[2], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右下角顶点
+                // cv::circle(image_raw_copy, rect1[3], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左下角顶点
+
+                // //绘制最小外接正方形的每条边
+                // for(int i = 0; i < 4; i++)
+                //     line(image_raw_copy, rect1[i], rect1[(i+1)%4], cv::Scalar(255, 0, 0), 2, 8);
+
+                // //抠取出数字区域的二值图像
+                // cv::Mat roi;
+                // roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
+                // //cv::imshow("resizeRoi", roi);
+                // cv::resize(roi, roi, cv::Size(50, 50));
+                // cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/test.jpg", roi);
+
+                // roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
+                // //模板匹配识别数字
+                // serise_num = temple_image(roi);
+                // std::cout << "serise_num:  " << serise_num << std::endl;
+
+
+///////////////////////////////////////////////////////////////////检测红色门框////////////////////////////////////////////////////////////////////
+                //颜色分割出红色,得到二值图像image_threshold_red
+                cv::inRange(image_hsv, cv::Scalar(0, 43, 46), cv::Scalar(10, 255, 255), image_threshold_red1);
+                cv::inRange(image_hsv, cv::Scalar(156, 43, 46), cv::Scalar(180, 255, 255), image_threshold_red2);
+                cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
+
+                //形态学运算，先腐蚀(erode)再膨胀(dilate)
+                cv::Mat image_erode1, image_dilate1;
                 cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
-                cv::dilate(image_threshold, image_dilate, kernel);
-                //cv::imshow("image_dilate", image_dilate);
-                cv::erode(image_dilate, image_erode, kernel);
-                cv::imshow("image_erode", image_erode);
-        
+                cv::erode(image_threshold_red, image_erode1, kernel);
+                cv::dilate(image_erode1, image_dilate1, kernel);
+                cv::imshow("red image", image_dilate1);
+
                 //寻找轮廓
-                std::vector<std::vector<cv::Point> > contours;
-                std::vector<cv::Vec4i> hierarchy;
-                cv::findContours(image_erode, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
-
-                //画轮廓
-                cv::Mat image_contours(image_raw.size(), CV_8UC3, cv::Scalar(0,0,0));
-
-                //检测不到轮廓的话就退出本次循环
-                if(contours.empty())
-                    continue;
-
-                //取外轮廓squares, 其中有多个轮廓，每个轮廓含有很多个点
-                std::vector<std::vector<cv::Point> > squares;
-                std::list<int> len_list;
+                std::vector<std::vector<cv::Point> > contours1;
+                std::vector<cv::Vec4i> hierarchy1;
+                cv::findContours(image_dilate1, contours1, hierarchy1, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
                 //计算每个轮廓的面积
-                for (int i = 0; i < contours.size(); i++)
-                {
-                    len_list.push_back(cv::contourArea(contours[i]));
+                 std::list<int> len_list1;
+                for (int i = 0; i < contours1.size(); i++){
+                    len_list1.push_back(cv::contourArea(contours1[i]));
                 }
 
-                //寻找面积最大的轮廓
-                if (len_list.size() > 0)
-                {
-                    squares.push_back(contours[std::distance(len_list.begin(), max_element(len_list.begin(), len_list.end()))]);
+                //取面积最大的轮廓(外轮廓)
+                std::vector<std::vector<cv::Point> > squares1;
+                if (len_list1.size() > 0){
+                    squares1.push_back(contours1[std::distance(len_list1.begin(), max_element(len_list1.begin(), len_list1.end()))]);
                 }
 
-                //最小外接矩形集合box
-                std::vector<cv::RotatedRect> box(squares.size());
-                std::vector<cv::Rect> srcRect(squares.size());
+                // //取内轮廓
+                // std::vector<std::vector<cv::Point> > squares1;
+                // if (len_list1.size() > 0){
+                //     std::list<int>::iterator it = len_list1.begin();
+                //     advance(it,std::distance(len_list1.begin(), max_element(len_list1.begin(), len_list1.end())));
+                //     len_list1.erase(it);
+                //     squares1.push_back(contours1[std::distance(len_list1.begin(), max_element(len_list1.begin(), len_list1.end()))]);
+                // }
 
-                for(int i = 0; i < squares.size(); i++)
-                {
-                    srcRect[i] = cv::boundingRect(squares[i]);
-                    //计算轮廓i的最小外接矩形
-                    box[i] = cv::minAreaRect(cv::Mat(squares[i]));
-                    //绘制最小外接矩形的中心点
-                    cv::circle(image_raw, cv::Point(box[i].center.x, box[i].center.y), 1, cv::Scalar(255, 0, 0), -1, 8); 
+                //检测不到轮廓的话就退出本次循环
+                if(contours1.empty()){
+                    continue;
                 }
 
-                cv::Point2f rect1[4];//外接正方形的四个顶点
 
-                rect1[0].x = box[0].center.x - srcRect[0].height/2;
-                rect1[0].y = box[0].center.y - srcRect[0].height/2;//左上角顶点
+////////////////////////////////////////////////////////////////////三条直线逼近最短距离/////////////////////////////////////////////////////////////////////////
+                std::vector<cv::Point> find_V = squares1[0];
+                std::vector<double> find_distance1(find_V.size());
+                std::vector<double> find_distance2(find_V.size());
+                std::vector<double> find_distance3(find_V.size());
+                std::vector<double> find_distance4(find_V.size());
+                cv::Point find_Point, min_Point1, min_Point2, min_Point3, min_Point4, min_central;
 
-                rect1[1].x = box[0].center.x + srcRect[0].height/2;
-                rect1[1].y = box[0].center.y -  srcRect[0].height/2;//右上角顶点
+                for(int i = 0; i<find_V.size();i++){
+                    find_Point = find_V[i];
+                    find_distance1[i]=abs((find_Point.x+find_Point.y)/sqrt(2));
+                    find_distance2[i]=abs((find_Point.x-find_Point.y+480)/sqrt(2));
+                    find_distance3[i]=abs((find_Point.x-find_Point.y-640)/sqrt(2));
+                    find_distance4[i]=abs((find_Point.x+find_Point.y-1120)/sqrt(2));
+                }
 
-                rect1[2].x = box[0].center.x + srcRect[0].height/2;
-                rect1[2].y = box[0].center.y + srcRect[0].height/2;//右下角顶点
+                int Point_pos1=0, Point_pos2=0, Point_pos3=0, Point_pos4=0;
+                if(find_distance1.size()>0 && find_distance2.size()>0 && find_distance3.size()>0 && find_distance4.size()>0){
+                    Point_pos1=std::distance(find_distance1.begin(), min_element(find_distance1.begin(), find_distance1.end()));
+                    min_Point1=find_V[Point_pos1];
 
-                rect1[3].x = box[0].center.x - srcRect[0].height/2;
-                rect1[3].y = box[0].center.y + srcRect[0].height/2;//左下角顶点
+                    Point_pos2=std::distance(find_distance2.begin(), min_element(find_distance2.begin(), find_distance2.end()));
+                    min_Point2=find_V[Point_pos2];
 
-                cv::circle(image_raw, rect1[0], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左上角顶点
-                cv::circle(image_raw, rect1[1], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右上角顶点
-                cv::circle(image_raw, rect1[2], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的右下角顶点
-                cv::circle(image_raw, rect1[3], 4, cv::Scalar(0, 0, 255), -1, 8); //绘制最小外接正方形的左下角顶点
+                    Point_pos3=std::distance(find_distance3.begin(), min_element(find_distance3.begin(), find_distance3.end()));
+                    min_Point3=find_V[Point_pos3];
 
-                //绘制最小外接正方形的每条边
-                for(int i = 0; i < 4; i++)
-                    line(image_raw, rect1[i], rect1[(i+1)%4], cv::Scalar(255, 0, 0), 2, 8);
+                    Point_pos4=std::distance(find_distance4.begin(), min_element(find_distance4.begin(), find_distance4.end()));
+                    min_Point4=find_V[Point_pos4];
+                }
 
-                //抠取出数字区域的二值图像
-                cv::Mat roi;
-                roi = image_erode(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
-                cv::imshow("resizeRoi", roi);
-                cv::resize(roi, roi, cv::Size(50, 50));
-                cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/test.jpg", roi);
+                min_central.x =  (min_Point1.x + min_Point2.x + min_Point3.x + min_Point4.x)/4;
+                min_central.y = (min_Point1.y + min_Point2.y + min_Point3.y + min_Point4.y)/4;
 
-                roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
-                //模板匹配识别数字
-                serise_num = temple_image(roi);
-                std::cout << "serise_num:  " << serise_num << std::endl;
+                //绘制外边框的顶点和中点
+                cv::circle(image_raw, find_V[0], 2, cv::Scalar(0, 0, 0), -1);
+                cv::circle(image_raw, min_Point1, 2, cv::Scalar(0, 0, 255), -1);
+                cv::circle(image_raw, min_Point2, 2, cv::Scalar(0, 0, 255), -1);
+                cv::circle(image_raw, min_Point3, 2, cv::Scalar(0, 0, 255), -1);
+                cv::circle(image_raw, min_Point4, 2, cv::Scalar(0, 0, 255), -1);
+                cv::circle(image_raw, min_central, 2, cv::Scalar(0, 255, 255), -1);
+                
+                //绘制外边框的四条线
+                cv::line(image_raw,min_Point1,min_Point2,cv::Scalar(0,255,0),1,8,0);
+                cv::line(image_raw,min_Point2,min_Point4,cv::Scalar(0,255,0),1,8,0);
+                cv::line(image_raw,min_Point3,min_Point4,cv::Scalar(0,255,0),1,8,0);
+                cv::line(image_raw,min_Point3,min_Point1,cv::Scalar(0,255,200),1,8,0);
 
-                ////////////////////////求解三点空间坐标//////////////////////////
-                //四个顶点的像素坐标
-                /*
-                        1——2
-                         |        | 
-                        3——4
-                */
-                Eigen::Vector3d min_P1,  min_P2,  min_P3 ,  min_P4, min_Point_central;
-                min_P1 << rect1[0].x, rect1[0].y, 1;//P1（左上）
-                min_P2 << rect1[1].x, rect1[1].y, 1;//P2（右上）
-                min_P3 << rect1[3].x, rect1[3].y, 1;//P3（左下）
-                min_P4 << rect1[2].x, rect1[2].y, 1;//P4（右下）
-                min_Point_central << box[0].center.x, box[0].center.y, 1;//中心点
 
-                // std::cout << "中心点像素坐标：" << min_Point_central[0] << "  " << min_Point_central[1] << std::endl;
-                std::string name = cv::format("%d (%f, %f)", serise_num, min_P1[0], min_P1[1]);
-                cv::putText(image_raw, name, cv::Point(box[0].center.x, box[0].center.y), 1, 1, cv::Scalar(255,0,0));
+///////////////////////////////////////////////////////////////////////////////求解空间坐标///////////////////////////////////////////////////////////////////////////////
+//                 /*顶点顺序
+//                         1——2
+//                          |        | 
+//                         3——4
+//                 */
+//////////////////////////////////////////////////////////////////////////////////像素坐标/////////////////////////////////////////////////////////////////////////////////
+               Eigen::Vector3d min_P1,  min_P2,  min_P3 ,  min_P4;
+               min_P1 << min_Point1.x, min_Point1.y, 1;
+               min_P2 << min_Point2.x, min_Point2.y, 1;
+               min_P3 << min_Point3.x, min_Point3.y, 1;
+               min_P4 << min_Point4.x, min_Point4.y, 1;
+
+//                 // std::cout << "中心点像素坐标：" << min_Point_central[0] << "  " << min_Point_central[1] << std::endl;
+//                 std::string name = cv::format("%d (%f, %f)", serise_num, min_P1[0], min_P1[1]);
+//                 cv::putText(image_raw, name, cv::Point(box[0].center.x, box[0].center.y), 1, 1, cv::Scalar(255,0,0));
                 cv::imshow("image_detetct", image_raw);
 
+
+///////////////////////////////////////////////////////////////////////////////相机参数///////////////////////////////////////////////////////////////////////////////////
                 //相机的内参矩阵(3x3)
                 Eigen::Matrix3d CameraM;
                 Eigen::Vector4d CameraPram;
-                CameraPram[0] = 572.7926959320354;//fx
-                CameraPram[1] = 572.0023335829402;//fy
-                CameraPram[2] = 316.3742545740499;//cx
-                CameraPram[3] = 207.8033169148048;//cy
+                CameraPram[0] = 366.997006;//fx
+                CameraPram[1] = 366.447492;//fy
+                CameraPram[2] = 331.133147;//cx
+                CameraPram[3] = 239.626159;//cy
                 CameraM << CameraPram[0], 0, CameraPram[2], 0, CameraPram[1], CameraPram[3], 0, 0, 1;
 
-                double w_camera = 1.17492;
-
+//////////////////////////////////////////////////////////////////////////相机归一化坐标//////////////////////////////////////////////////////////////////////////////
                 //相机归一化坐标（Xc/Zc, Yc/Zc)T =  相机内参矩阵的逆 *(u, v)T
                 Eigen::Vector3d trans_P1d, trans_P2d, trans_P3d, trans_P4d;
                 trans_P1d = CameraM.inverse() * min_P1;
@@ -399,28 +496,7 @@ int main(int argc, char **argv)
                 trans_P3d = CameraM.inverse() * min_P3;
                 trans_P4d = CameraM.inverse() * min_P4;
 
-                //3.13鱼眼摄像头模型
-                double Rd1 = sqrt(trans_P1d[0]*trans_P1d[0] + trans_P1d[1] * trans_P1d[1]);
-                double Rd2 = sqrt(trans_P2d[0]*trans_P2d[0] + trans_P2d[1] * trans_P2d[1]);
-                double Rd3 = sqrt(trans_P3d[0]*trans_P3d[0] + trans_P3d[1] * trans_P3d[1]);
-                double Rd4 = sqrt(trans_P4d[0]*trans_P4d[0] + trans_P4d[1] * trans_P4d[1]);
-                
-                double r1_camera=tan(Rd1 * w_camera) / (2 * tan(w_camera/2));
-                double r2_camera=tan(Rd2 * w_camera) / (2 * tan(w_camera/2));
-                double r3_camera=tan(Rd3 * w_camera) / (2 * tan(w_camera/2));
-                double r4_camera=tan(Rd4 * w_camera) / (2 * tan(w_camera/2));
-                
-                Eigen::Vector3d trans_P1, trans_P2, trans_P3, trans_P4;
-                trans_P1[0] = trans_P1d[0] * r1_camera / Rd1;
-                trans_P1[1] = trans_P1d[1] * r1_camera / Rd1;
-                trans_P2[0] = trans_P2d[0] * r2_camera / Rd2;
-                trans_P2[1] = trans_P2d[1] * r2_camera / Rd2;
-                trans_P3[0] = trans_P3d[0] * r3_camera / Rd3;
-                trans_P3[1] = trans_P3d[1] * r3_camera / Rd3;
-                trans_P4[0] = trans_P4d[0] * r4_camera / Rd4;
-                trans_P4[1] = trans_P4d[1] * r4_camera / Rd4;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////牛顿迭代求解三元非线性方程组解算深度信息/////////////////////////////////////////////////////////
                 float Epsilon =0.01;	
                 Eigen::MatrixXd X1_Jac(1,4); 
 
@@ -442,17 +518,17 @@ int main(int argc, char **argv)
                 Eigen::MatrixXd	JAC(4,7);//jacobin矩阵
 
                 double y0[J_N+3]={0,0,0,0,0,0,0}, jacobian[J_N][J_N+3], invjacobian[J_N+3][J_N], x1[J_N]={0,0,0,0}, errornorm, v[12], L=0;
-                double D1 = 56, D2 = 56, D3 = 79.2, D4 = 56;//内轮廓实际大小(单位cm)
+                double D1 = 56.35, D2 = 56.35, D3 = 79.69, D4 = 56.35;//外轮廓实际大小(单位cm)
                 int i_inv=0, j_inv=0, k_inv=0, i_jcb=0, iter = 0;
 
-                v[0] = trans_P1[0];//Xc1
-                v[1] = trans_P2[0];//Xc2
-                v[2] = trans_P3[0];//Xc3
-                v[3] = trans_P4[0];//Xc4
-                v[4] = trans_P1[1];//Yc1
-                v[5] = trans_P2[1];//Yc2
-                v[6] = trans_P3[1];//Yc3
-                v[7] = trans_P4[1];//Yc4
+                v[0] = trans_P1d[0];//Xc1
+                v[1] = trans_P2d[0];//Xc2
+                v[2] = trans_P3d[0];//Xc3
+                v[3] = trans_P4d[0];//Xc4
+                v[4] = trans_P1d[1];//Yc1
+                v[5] = trans_P2d[1];//Yc2
+                v[6] = trans_P3d[1];//Yc3
+                v[7] = trans_P4d[1];//Yc4
                 v[8] = D1;
                 v[9] = D2;
                 v[10] = D3;
@@ -461,47 +537,47 @@ int main(int argc, char **argv)
                 do{
                     iter = iter + 1;
                     //计算雅克比矩阵 jacobian
-                    y0[0] = (v[0]* v[0]+ v[4]* v[4]+ 1)*x0[0]* x0[0] - 2 * (v[0] * v[1] +v[4] *v[5] +1)*x0[0] *x0[1] + (v[1] * v[1] + v[5] * v[5] + 1)*x0[1] * x0[1] - v[8] * v[8];
-                    y0[1] = (v[0]* v[0]+ v[4]* v[4]+ 1)*x0[0]* x0[0] - 2 * (v[0] * v[2] +v[4] *v[6] +1)*x0[0] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] * x0[2] - v[9] * v[9];
-                    y0[2] = (v[1] *v[1]+ v[5] *v[5]+ 1)*x0[1]* x0[1] - 2 * (v[1] * v[2] +v[5] *v[6] +1)*x0[1] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] *x0[2] - v[10] * v[10];
-                    y0[3] = (v[3]* v[3]+ v[7]* v[7]+ 1)*x0[3]* x0[3] - 2 * (v[3] * v[2] +v[7] *v[6] +1)*x0[3] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] *x0[2] - v[11] * v[11];
-                    y0[4] = (v[0]*x0[0]-v[1]*x0[1])*(v[6]*x0[2]-v[7]*x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(v[4]*x0[0]-v[5]*x0[1]);
-                    y0[5] = (v[0]*x0[0]-v[1]*x0[1])*(x0[2]-x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(x0[0]-x0[1]);
-                    y0[6] = (v[4]*x0[0]-v[5]*x0[1])*(x0[2]-x0[3])-(v[6]*x0[2]-v[7]*x0[3])*(x0[0]-x0[1]);
+                    y0[0] = (v[0]* v[0]+ v[4]* v[4]+ 1)*depth[0]* depth[0] - 2 * (v[0] * v[1] +v[4] *v[5] +1)*depth[0] * depth[1] + (v[1] * v[1] + v[5] * v[5] + 1)*depth[1] * depth[1] - v[8] * v[8];
+                    y0[1] = (v[0]* v[0]+ v[4]* v[4]+ 1)*depth[0]* depth[0] - 2 * (v[0] * v[2] +v[4] *v[6] +1)*depth[0] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] * depth[2] - v[9] * v[9];
+                    y0[2] = (v[1] *v[1]+ v[5] *v[5]+ 1)*depth[1]* depth[1] - 2 * (v[1] * v[2] +v[5] *v[6] +1)*depth[1] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] *depth[2] - v[10] * v[10];
+                    y0[3] = (v[3]* v[3]+ v[7]* v[7]+ 1)*depth[3]* depth[3] - 2 * (v[3] * v[2] +v[7] *v[6] +1)*depth[3] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] *depth[2] - v[11] * v[11];
+                    y0[4] = (v[0]*depth[0]-v[1]*depth[1])*(v[6]*depth[2]-v[7]*depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(v[4]*depth[0]-v[5]*depth[1]);
+                    y0[5] = (v[0]*depth[0]-v[1]*depth[1])*(depth[2]-depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(depth[0]-depth[1]);
+                    y0[6] = (v[4]*depth[0]-v[5]*depth[1])*(depth[2]-depth[3])-(v[6]*depth[2]-v[7]*depth[3])*(depth[0]-depth[1]);
                     //计算初值位置的值
                     //计算雅克比矩阵的逆矩阵 invjacobian
                     //jacobian have n*n element  计算函数雅克比的值
-                    JAC(0,0)= 2 * (v[0] * v[0] + v[4] * v[4] + 1)*x0[0] - 2 * (v[0] * v[1] + v[4] * v[5] + 1)*x0[1];
-                    JAC(0,1) = 2 * (v[0] * v[0] + v[4] * v[4] + 1)*x0[0] - 2 * (v[0] * v[2] + v[4] * v[6] + 1)*x0[2];
+                    JAC(0,0)= 2 * (v[0] * v[0] + v[4] * v[4] + 1)*depth[0] - 2 * (v[0] * v[1] + v[4] * v[5] + 1)*depth[1];
+                    JAC(0,1) = 2 * (v[0] * v[0] + v[4] * v[4] + 1)*depth[0] - 2 * (v[0] * v[2] + v[4] * v[6] + 1)*depth[2];
                     JAC(0,2)= 0;
                     JAC(0,3) = 0;
-                    JAC(0,4) =  (v[0])*(v[6]*x0[2]-v[7]*x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(v[4]); ;
-                    JAC(0,5) =  (v[0])*(x0[2]-x0[3])-(v[2]*x0[2]-v[3]*x0[3]);
-                    JAC(0,6) =  (v[4])*(x0[2]-x0[3])-(v[6]*x0[2]-v[7]*x0[3]);
+                    JAC(0,4) =  (v[0])*(v[6]*depth[2]-v[7]*depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(v[4]); ;
+                    JAC(0,5) =  (v[0])*(depth[2]-depth[3])-(v[2]*depth[2]-v[3]*depth[3]);
+                    JAC(0,6) =  (v[4])*(depth[2]-depth[3])-(v[6]*depth[2]-v[7]*depth[3]);
 
-                    JAC(1,0) = -2 * (v[0] * v[1] + v[4] * v[5] + 1)*x0[0] + 2 * (v[1] * v[1] + v[5] * v[5] + 1)*x0[1];
+                    JAC(1,0) = -2 * (v[0] * v[1] + v[4] * v[5] + 1)*depth[0] + 2 * (v[1] * v[1] + v[5] * v[5] + 1)*depth[1];
                     JAC(1,1) = 0;
-                    JAC(1,2) = 2 * (v[1] * v[1] + v[5] * v[5] + 1)*x0[1] - 2 * (v[1] * v[2] + v[5] * v[6] + 1)*x0[2];
+                    JAC(1,2) = 2 * (v[1] * v[1] + v[5] * v[5] + 1)*depth[1] - 2 * (v[1] * v[2] + v[5] * v[6] + 1)*depth[2];
                     JAC(1,3) = 0;
-                    JAC(1,4) = (-v[1])*(v[6]*x0[2]-v[7]*x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(-v[5]);
-                    JAC(1,5) = (-v[1])*(x0[2]-x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(-1);
-                    JAC(1,6) = (-v[5])*(x0[2]-x0[3])-(v[6]*x0[2]-v[7]*x0[3])*(-1);
+                    JAC(1,4) = (-v[1])*(v[6]*depth[2]-v[7]*depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(-v[5]);
+                    JAC(1,5) = (-v[1])*(depth[2]-depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(-1);
+                    JAC(1,6) = (-v[5])*(depth[2]-depth[3])-(v[6]*depth[2]-v[7]*depth[3])*(-1);
 
                     JAC(2,0) = 0;
-                    JAC(2,1) = -2 * (v[0] * v[2] + v[4] * v[6] + 1)*x0[0] + 2 * (v[2] * v[2] + v[6] * v[6] + 1)*x0[2];
-                    JAC(2,2) = -2 * (v[1] * v[2] + v[5] * v[6] + 1)*x0[1] + 2 * (v[2] * v[2] + v[6] * v[6] + 1)*x0[2];
-                    JAC(2,3) = 2 * (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] - 2 * (v[3] * v[2] + v[7] * v[6] + 1)*x0[3];
-                    JAC(2,4) = (v[0]*x0[0]-v[1]*x0[1])*(v[6])-(v[2])*(v[4]*x0[0]-v[5]*x0[1]);
-                    JAC(2,5) = (v[0]*x0[0]-v[1]*x0[1])*(1)-(v[2]*(x0[0]-x0[1]));
-                    JAC(2,6) = (v[4]*x0[0]-v[5]*x0[1])*(1)-(v[6]*(x0[0]-x0[1]));
+                    JAC(2,1) = -2 * (v[0] * v[2] + v[4] * v[6] + 1)*depth[0] + 2 * (v[2] * v[2] + v[6] * v[6] + 1)*depth[2];
+                    JAC(2,2) = -2 * (v[1] * v[2] + v[5] * v[6] + 1)*depth[1] + 2 * (v[2] * v[2] + v[6] * v[6] + 1)*depth[2];
+                    JAC(2,3) = 2 * (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] - 2 * (v[3] * v[2] + v[7] * v[6] + 1)*depth[3];
+                    JAC(2,4) = (v[0]*depth[0]-v[1]*depth[1])*(v[6])-(v[2])*(v[4]*depth[0]-v[5]*depth[1]);
+                    JAC(2,5) = (v[0]*depth[0]-v[1]*depth[1])*(1)-(v[2]*(depth[0]-depth[1]));
+                    JAC(2,6) = (v[4]*depth[0]-v[5]*depth[1])*(1)-(v[6]*(depth[0]-depth[1]));
 
                     JAC(3,0) = 0;
                     JAC(3,1) = 0;
                     JAC(3,2) = 0;
-                    JAC(3,3) = 2 * (v[3] * v[3] + v[7] * v[7] + 1) * x0[3] -2 * (v[3] * v[2] + v[7] * v[6] + 1) *x0[2];
-                    JAC(3,4) = (v[0]*x0[0]-v[1]*x0[1])*(-v[7])-(-v[3])*(v[4]*x0[0]-v[5]*x0[1]);
-                    JAC(3,5) = (v[0]*x0[0]-v[1]*x0[1])*(-1)-(-v[3])*(x0[0]-x0[1]);
-                    JAC(3,6) = (v[4]*x0[0]-v[5]*x0[1])*(-1)-(-v[7])*(x0[0]-x0[1]);
+                    JAC(3,3) = 2 * (v[3] * v[3] + v[7] * v[7] + 1) * depth[3] -2 * (v[3] * v[2] + v[7] * v[6] + 1) *depth[2];
+                    JAC(3,4) = (v[0]*depth[0]-v[1]*depth[1])*(-v[7])-(-v[3])*(v[4]*depth[0]-v[5]*depth[1]);
+                    JAC(3,5) = (v[0]*depth[0]-v[1]*depth[1])*(-1)-(-v[3])*(depth[0]-depth[1]);
+                    JAC(3,6) = (v[4]*depth[0]-v[5]*depth[1])*(-1)-(-v[7])*(depth[0]-depth[1]);
 
                     Eigen::JacobiSVD<Eigen::MatrixXd> svd(JAC, Eigen::ComputeFullU | Eigen::ComputeFullV);//M=USV*
                     double  pinvtoler = 1.e-8; //tolerance
@@ -527,7 +603,7 @@ int main(int argc, char **argv)
                     //优化版迭代部分
                     Y0_Jac<<y0[0],y0[1],y0[2],y0[3],y0[4],y0[5],y0[6];
                 
-                    X1_Jac = X0_Jac-Y0_Jac*X_invJav;//x1=x0-f/df
+                    X1_Jac = X0_Jac-Y0_Jac*X_invJav;//x1=depth-f/df
 
                     jacobian_temp(0,0) = 2 * (v[0] * v[0] + v[4] * v[4] + 1)*X1_Jac(0,0) - 2 * (v[0] * v[1] + v[4] * v[5] + 1)*X1_Jac(0,1);
                     jacobian_temp(0,1)  = 2 * (v[0] * v[0] + v[4] * v[4] + 1)*X1_Jac(0,0) - 2 * (v[0] * v[2] + v[4] * v[6] + 1)*X1_Jac(0,2);
@@ -590,20 +666,20 @@ int main(int argc, char **argv)
 
                     W_Jac = X0_Jac -2*Y0_Jac*X_invJav_M;//优化之后的迭代
 
-                    double x0_temp[4];
+                    double depth_temp[4];
                     for(int i=0;i<4;i++)
-                        x0_temp[i]=x0[i];
+                        depth_temp[i]=depth[i];
 
                     for(int i=0;i<4;i++)
-                        x0[i]=W_Jac(0,i);
+                        depth[i]=W_Jac(0,i);
 
-                    Y0_Jac(0,0) = (v[0]* v[0]+ v[4]* v[4]+ 1)*x0[0]* x0[0] - 2 * (v[0] * v[1] +v[4] *v[5] +1)*x0[0] *x0[1] + (v[1] * v[1] + v[5] * v[5] + 1)*x0[1] * x0[1] - v[8] * v[8];
-                    Y0_Jac(0,1)  = (v[0]* v[0]+ v[4]* v[4]+ 1)*x0[0]* x0[0] - 2 * (v[0] * v[2] +v[4] *v[6] +1)*x0[0] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] * x0[2] - v[9] * v[9];
-                    Y0_Jac(0,2)  = (v[1] *v[1]+ v[5] *v[5]+ 1)*x0[1]* x0[1] - 2 * (v[1] * v[2] +v[5] *v[6] +1)*x0[1] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] *x0[2] - v[10] * v[10];
-                    Y0_Jac(0,3)  = (v[3]* v[3]+ v[7]* v[7]+ 1)*x0[3]* x0[3] - 2 * (v[3] * v[2] +v[7] *v[6] +1)*x0[3] *x0[2] + (v[2] * v[2] + v[6] * v[6] + 1)*x0[2] *x0[2] - v[11] * v[11];
-                    Y0_Jac(0,4)  = (v[0]*x0[0]-v[1]*x0[1])*(v[6]*x0[2]-v[7]*x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(v[4]*x0[0]-v[5]*x0[1]);
-                    Y0_Jac(0,5)  = (v[0]*x0[0]-v[1]*x0[1])*(x0[2]-x0[3])-(v[2]*x0[2]-v[3]*x0[3])*(x0[0]-x0[1]);
-                    Y0_Jac(0,6)  = (v[4]*x0[0]-v[5]*x0[1])*(x0[2]-x0[3])-(v[6]*x0[2]-v[7]*x0[3])*(x0[0]-x0[1]);
+                    Y0_Jac(0,0) = (v[0]* v[0]+ v[4]* v[4]+ 1)*depth[0]* depth[0] - 2 * (v[0] * v[1] +v[4] *v[5] +1)*depth[0] *depth[1] + (v[1] * v[1] + v[5] * v[5] + 1)*depth[1] * depth[1] - v[8] * v[8];
+                    Y0_Jac(0,1)  = (v[0]* v[0]+ v[4]* v[4]+ 1)*depth[0]* depth[0] - 2 * (v[0] * v[2] +v[4] *v[6] +1)*depth[0] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] * depth[2] - v[9] * v[9];
+                    Y0_Jac(0,2)  = (v[1] *v[1]+ v[5] *v[5]+ 1)*depth[1]* depth[1] - 2 * (v[1] * v[2] +v[5] *v[6] +1)*depth[1] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] *depth[2] - v[10] * v[10];
+                    Y0_Jac(0,3)  = (v[3]* v[3]+ v[7]* v[7]+ 1)*depth[3]* depth[3] - 2 * (v[3] * v[2] +v[7] *v[6] +1)*depth[3] *depth[2] + (v[2] * v[2] + v[6] * v[6] + 1)*depth[2] *depth[2] - v[11] * v[11];
+                    Y0_Jac(0,4)  = (v[0]*depth[0]-v[1]*depth[1])*(v[6]*depth[2]-v[7]*depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(v[4]*depth[0]-v[5]*depth[1]);
+                    Y0_Jac(0,5)  = (v[0]*depth[0]-v[1]*depth[1])*(depth[2]-depth[3])-(v[2]*depth[2]-v[3]*depth[3])*(depth[0]-depth[1]);
+                    Y0_Jac(0,6)  = (v[4]*depth[0]-v[5]*depth[1])*(depth[2]-depth[3])-(v[6]*depth[2]-v[7]*depth[3])*(depth[0]-depth[1]);
                 
                     Eigen::JacobiSVD<Eigen::MatrixXd> svd_2(jacobian_temp, Eigen::ComputeFullU | Eigen::ComputeFullV);//M=USV*
                     // double  pinvtoler = 1.e-8; //tolerance
@@ -630,51 +706,65 @@ int main(int argc, char **argv)
 
                     for(int i=0;i<4;i++)     
                     {
-                        x0[i]=Z_Jac(0,i);
+                        depth[i]=Z_Jac(0,i);
                         X0_Jac(0,i)=Z_Jac(0,i);
                         x_start[i]=Z_Jac(0,i);   
                     }
                     
-                    if(  ((x0_temp[0]-Z_Jac(0,0))+ (x0_temp[1]-Z_Jac(0,1))+ (x0_temp[2]-Z_Jac(0,2))+ (x0_temp[3]-Z_Jac(0,3)))  < Epsilon )
+                    if(  ((depth_temp[0]-Z_Jac(0,0))+ (depth_temp[1]-Z_Jac(0,1))+ (depth_temp[2]-Z_Jac(0,2))+ (depth_temp[3]-Z_Jac(0,3)))  < Epsilon )
                     {
                         break;
                     }
                 } while (iter<Max);
 
-                x0[0]=fabs(x0[0]);
-                x0[1]=fabs(x0[1]);
-                x0[2]=fabs(x0[2]);
-                x0[3]=fabs(x0[3]);
- ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                std::cout<<"深度：P1 " << x0[0] << " P2 " << x0[1] << " P3 " << x0[2] << " P4 " << x0[3] << "cm" <<std::endl;
 
-                float X1_camera=trans_P1[0]*x0[0];
-                float Y1_camera=trans_P1[1]*x0[0];
-                float X2_camera=trans_P2[0]*x0[1];
-                float Y2_camera=trans_P2[1]*x0[1];
-                float X3_camera=trans_P3[0]*x0[2];
-                float Y3_camera=trans_P3[1]*x0[2];
-                float X4_camera=trans_P4[0]*x0[3];
-                float Y4_camera=trans_P4[1]*x0[3];
+ /////////////////////////////////////////////////////////////////////////得到的深度信息//////////////////////////////////////////////////////////////////////////////
+                depth[0]=fabs(depth[0]);
+                depth[1]=fabs(depth[1]);
+                depth[2]=fabs(depth[2]);
+                depth[3]=fabs(depth[3]);
+                std::cout<<"深度：P1 " << depth[0] << " P2 " << depth[1] << " P3 " << depth[2] << " P4 " << depth[3] << "cm" <<std::endl;
 
-                // ////////////////////////////////////////////////////相机坐标////////////////////////////////////////////////
+                //X--与u同向--右方
+                //Y--与v同向--下方
+                float X1_camera=trans_P1d[0]*depth[0];
+                float Y1_camera=trans_P1d[1]*depth[0];
+                float X2_camera=trans_P2d[0]*depth[1];
+                float Y2_camera=trans_P2d[1]*depth[1];
+                float X3_camera=trans_P3d[0]*depth[2];
+                float Y3_camera=trans_P3d[1]*depth[2];
+                float X4_camera=trans_P4d[0]*depth[3];
+                float Y4_camera=trans_P4d[1]*depth[3];
+
+
+//////////////////// ////////////////////////////////////////////////////////相机坐标/////////////////////////////////////////////////////////////////////////////////////
                 //相机正前方是y轴方向，右边是x轴方向，正上方是z轴方向 Pc（Xc, Yc, Zc）
-                //1、深度是沿着y轴方向伸展的，因此深度x0[4]要放在Yc的位置上，Yc = x0[]
+                //1、深度是沿着y轴方向伸展的，因此深度depth[4]要放在Yc的位置上，Yc = depth[]
                 //2、在图像中y轴(v轴)方向是朝下的，而在相机坐标系中Z轴是朝正上方的，因此Zc = - Y_camera
-                // Pc1 << X1_camera, x0[0], -Y1_camera;//左上顶点在相机坐标系下的坐标
-                // Pc2 << X2_camera, x0[1], -Y2_camera;//右上顶点在相机坐标系下的坐标
-                // Pc3 << X3_camera, x0[2], -Y3_camera;//左下顶点在相机坐标系下的坐标
-                // Pc4 << X4_camera, x0[3], -Y4_camera;//右下顶点在相机坐标系下的坐标
+                // Pc1 << X1_camera, depth[0], -Y1_camera;//左上顶点在相机坐标系下的坐标
+                // Pc2 << X2_camera, depth[1], -Y2_camera;//右上顶点在相机坐标系下的坐标
+                // Pc3 << X3_camera, depth[2], -Y3_camera;//左下顶点在相机坐标系下的坐标
+                // Pc4 << X4_camera, depth[3], -Y4_camera;//右下顶点在相机坐标系下的坐标
 
                 //中心点的相机坐标，Yc上面加余量是因为相机与飞机中心不是重合的，所以要补偿
-                Pc_central<< (X1_camera+X4_camera+X2_camera+X3_camera)/4, (x0[1]+x0[2]+x0[0]+x0[3])/4, (-Y2_camera-Y3_camera-Y1_camera-Y4_camera)/4;
+                // u-右, v-下
+                //1. X-右, Y-前, Z-上
+                // Pc_central << (X1_camera+X4_camera+X2_camera+X3_camera)/4, 
+                //                              (depth[1]+depth[2]+depth[0]+depth[3])/4, 
+                //                              (-Y2_camera-Y3_camera-Y1_camera-Y4_camera)/4;
+                //2. X-前, Y-左, Z-上
+                Pc_central << (depth[1]+depth[2]+depth[0]+depth[3])/4, 
+                                             -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
+                                             -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
+
                 
                 std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
 
+
+///////////////////////////////////////////////////////////////////解算世界坐标(回调函数中进行)//////////////////////////////////////////////////////////////////////
                 ros::spinOnce();
             
                 std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
-                cv::imshow("image_detetct", image_raw);
                 cv::waitKey(1);      
 
             }

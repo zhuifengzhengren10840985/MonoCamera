@@ -434,12 +434,19 @@ int main(int argc, char **argv)
                 cv::inRange(image_hsv, cv::Scalar(low_H_red2,low_S_red,low_V_red), cv::Scalar(high_H_red2,high_S_red,high_V_red), image_threshold_red2);
                 cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
 
-                //形态学运算，先腐蚀(erode)再膨胀(dilate)
+                // //形态学运算，先腐蚀(erode)再膨胀(dilate)
+                // cv::Mat image_erode1, image_dilate1;
+                // cv::Mat kernel1 = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
+                // cv::erode(image_threshold_red, image_erode1, kernel1);
+                // cv::dilate(image_erode1, image_dilate1, kernel1);
+                // cv::imshow(SquareDetection, image_dilate1);
+
+                //形态学运算，先膨胀(dilate)再腐蚀(erode)
                 cv::Mat image_erode1, image_dilate1;
                 cv::Mat kernel1 = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4,4));
-                cv::erode(image_threshold_red, image_erode1, kernel1);
-                cv::dilate(image_erode1, image_dilate1, kernel1);
-                cv::imshow(SquareDetection, image_dilate1);
+                cv::dilate(image_threshold_red, image_dilate1, kernel1);
+                cv::erode(image_dilate1, image_erode1, kernel1);
+                cv::imshow(SquareDetection, image_erode1);
 
                 //寻找轮廓
                 std::vector<std::vector<cv::Point> > contours1;

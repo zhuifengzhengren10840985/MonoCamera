@@ -199,7 +199,7 @@ int temple_image(cv::Mat img)
     float n1 = 0.0; 
     float n2 = 0.0; 
     cv::Mat result;
-	for (int i = 0; i < 27; ++i){
+	for (int i = 0; i < 158; ++i){
 		char name[520];
 		std::sprintf(name, "/home/lxl/catkin_ws/src/MonoCamera/template/%d.jpg", i);
 		src_image = cv::imread(name);
@@ -432,19 +432,19 @@ int main(int argc, char **argv)
                 int serise_num;
                 serise_num = temple_image(roi);
                 //0
-                if(serise_num >= 0 && serise_num <= 4){
+                if(serise_num >= 0 && serise_num <= 29){
                     number = 0;
                 }
                 //1
-                else if(serise_num >= 5 && serise_num <= 9){
+                else if(serise_num >= 30 && serise_num <= 51){
                     number = 1;
                 }
                 //2
-                else if(serise_num >= 10 && serise_num <= 16){
+                else if(serise_num >= 52 && serise_num <= 119){
                     number = 2;
                 }
                 //3
-                else if(serise_num >= 17 && serise_num <= 27){
+                else if(serise_num >= 120 && serise_num <= 158){
                     number = 3;
                 }
                 std::cout << "number:  " << number << std::endl;
@@ -904,6 +904,9 @@ int main(int argc, char **argv)
                     ros::spinOnce();
                 
                     std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
+                }
+                else{
+                    cout << "没有正确检测到边框!" << endl;
                 }
                 char c = (char)waitKey(25);
 		        if (c == 27)

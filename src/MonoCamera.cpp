@@ -204,7 +204,7 @@ int temple_image(cv::Mat img)
 		std::sprintf(name, "/home/lxl/catkin_ws/src/MonoCamera/template/%d.jpg", i);
 		src_image = cv::imread(name);
 		if (!src_image.data) 
-            std::cout << "failed to read" << std::endl; 
+            std::cout << "数字模板库读取失败！" << std::endl; 
 		result = substract(img, src_image);
 		c = get_One(result);
 		if (c < max) {
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
     {
         if(!cap.isOpened())
         {
-            std::cout << "Cannot open the cam!" << std::endl;
+            std::cout << "相机打开失败！" << std::endl;
             return -1;
         }
 
@@ -549,7 +549,7 @@ int main(int argc, char **argv)
                     //四个顶点
                     vector<point2D> vertex;
                     for(int i =0; i < 4; i++){
-                        point2D point_temp{squareFour[i].x, squareFour[i].y};
+                        point2D point_temp(squareFour[i].x, squareFour[i].y);
                         vertex.push_back(point_temp);
                     }
 

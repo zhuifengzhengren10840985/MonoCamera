@@ -225,7 +225,7 @@ int temple_image(cv::Mat img)
     cv::Mat result;
 	for (int i = 0; i < 158; ++i){
 		char name[520];
-		std::sprintf(name, "/home/nano/px4_ws/src/MonoCamera/template/%d.jpg", i);
+		std::sprintf(name, "/home/lxl/catkin_ws/src/MonoCamera/template/%d.jpg", i);
 		src_image = cv::imread(name);
 		if (!src_image.data) 
             std::cout << "数字模板库读取失败！" << std::endl; 
@@ -458,9 +458,9 @@ int main(int argc, char **argv)
                 roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
                 cv::imshow("resizeRoi", roi);
                 cv::resize(roi, roi, cv::Size(50, 50));
-                cv::imwrite("/home/nano/px4_ws/src/MonoCamera/roi.jpg", roi);
+                cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg", roi);
 
-                roi = cv::imread("/home/nano/px4_ws/src/MonoCamera/roi.jpg");
+                roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
 
                 //模板匹配识别数字
                 int serise_num;

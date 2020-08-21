@@ -80,10 +80,12 @@ int low_H_red1 = 0,
 //相机坐标
 Eigen::Vector3d Pc1,Pc2,Pc3, Pc4, Pc_central;
 
-//旋转矩阵
+//旋转矩阵3x3
 Eigen::Matrix3d R_Euler;
-//平移矩阵
+//平移矩阵3x1
 Eigen::Vector3d t_Euler;
+//欧式变换矩阵4x4
+Eigen::Isometry3d Tcw = Eigen::Isometry3d::Identity();
 //顶点及中心点的世界坐标
 Eigen::Vector3d P_world1, P_world2, P_world3, P_world4, P_worldcentral;
 
@@ -239,6 +241,7 @@ int temple_image(cv::Mat img)
 	return seriesNum;
 }
 
+
 ////////////////////////////////////////////////////////////订阅＋发布///////////////////////////////////////////////////////////
 
 /*
@@ -282,31 +285,29 @@ SubAndPub::SubAndPub()
 //订阅无人机位姿信息的回调函数,利用这些信息求出目标世界坐标,将目标信息发布出去
 void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-    //初始化四元数,初始化顺序为w,x,y,z(注意第一项为实部)
-    Eigen::Quaterniond Q = Eigen::Quaterniond(msg->pose.orientation.w, 
-                                                                                               msg->pose.orientation.x, 
-                                                                                               msg->pose.orientation.y, 
-                                                                                               msg->pose.orientation.z);
+    //四元数
+    Eigen::Quaterniond Q;
+    Q.x() = msg->pose.orientation.x;
+    Q.y() = msg->pose.orientation.y;
+    Q.z() = msg->pose.orientation.z;
+    Q.w() = msg->pose.orientation.w;
 
     //通过coeffs()函数按照x,y,z,w顺序打印成员,可以通过vec()打印虚部x,y,z
     std::cout << "四元数 x y z w:\n " << Q.coeffs() << std::endl;
 
-    //四元数归一化(Q要进行归一化才能进行计算)
-    Eigen::Quaterniond Q_normalized = Q.normalized();
-    std::cout << "归一化后的四元数 x y z w:\n " << Q_normalized.coeffs() << std::endl;
-
-    //旋转矩阵
-    R_Euler  = Q_normalized.matrix();
-    std::cout <<"旋转矩阵:\n" << R_Euler << std::endl;
-
-    //无人机在世界坐标系下的平移矩阵t_Euler((需要统一单位为cm,无人机坐标单位是m,所以这里要乘以100))
+    //平移矩阵(需要统一单位为cm,无人机坐标单位是m,所以这里要乘以100)
     t_Euler << msg->pose.position.x*100, 
                           msg->pose.position.y*100, 
                           msg->pose.position.z*100;
+    
     std::cout << "平移矩阵:\n" << t_Euler << std::endl;
 
-    //求中心点的世界坐标 Pw = R-1*Pc+t
-    P_worldcentral =R_Euler.inverse()* (Pc_central) + t_Euler;
+    //Tcw（world->camera）
+    Tcw.rotate(Q);
+    Tcw.pretranslate(t_Euler);
+
+    //求中心点的世界坐标 Pw = Twc * Pc = Tcw的逆 * Pc
+    P_worldcentral =Tcw.inverse()*Pc_central;
 
     //初始化MonoCamera::object类型的消息
     MonoCamera::object obj_output;

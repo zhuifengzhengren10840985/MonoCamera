@@ -1,3 +1,4 @@
+
 #include <cmath>
 #include <iostream>
 #include <ros/ros.h>
@@ -24,10 +25,10 @@ struct point2D
     int y;
 };
 
+//sort函数的第三个参数的仿函数
 bool comp1(const point2D &a, const point2D &b){
     return a.x < b.x;
 }
-
 bool comp2(const point2D &a, const point2D &b){
     return a.y < b.y;
 }
@@ -42,6 +43,7 @@ double depth[J_N] = {300,300,300,300};
 //牛顿迭代的初值(深度Z的初值)
 double x_start[J_N] = {300,300,300,300};
 
+//窗口名称
 const cv::String window_capture_name = "Video Capture";
 const cv::String NumberDetection = "Number Detection";
 const cv::String SquareDetection = "Square Detection";
@@ -85,8 +87,9 @@ Eigen::Vector3d t_Euler;
 //顶点及中心点的世界坐标
 Eigen::Vector3d P_world1, P_world2, P_world3, P_world4, P_worldcentral;
 
-////////////////////////////////////////////////////////////数字滑动条/////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////数字滑动条///////////////////////////////////////////////////////////
+
 static void on_low_H1_thresh_trackbar1(int, void *)
 {
     low_H_white1 = std::min(high_H_white1-1, low_H_white1);//防止最大值小于最小值
@@ -132,8 +135,8 @@ static void on_high_V_thresh_trackbar1(int, void *)
 }
 
 
-////////////////////////////////////////////////////////////边框滑动条/////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////边框滑动条///////////////////////////////////////////////////////////
+
 static void on_low_H1_thresh_trackbar2(int, void *)
 {
     low_H_red1 = std::min(high_H_red1-1, low_H_red1);//防止最大值小于最小值
@@ -178,7 +181,8 @@ static void on_high_V_thresh_trackbar2(int, void *)
 	setTrackbarPos("High V",SquareDetection,high_V_red);
 }
 
-//////////////////////////////////////////////////////////两幅图像相减////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////两幅图相减///////////////////////////////////////////////////////////
+
 cv::Mat substract(cv::Mat &src, cv::Mat&dst){
 	int sum = 0; 
     cv::Mat result = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
@@ -192,7 +196,8 @@ cv::Mat substract(cv::Mat &src, cv::Mat&dst){
 	return result;
 }
 
-////////////////////////////////////////////////////////////获取数字////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////获取数字///////////////////////////////////////////////////////////
+
 int get_One(cv::Mat image){
 	int sum_one = 0;
 	for (int i = 0; i < image.rows; ++i){
@@ -205,7 +210,8 @@ int get_One(cv::Mat image){
     return sum_one;
 }
 
-/////////////////////////////////////////////////////////////模板匹配//////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////模板匹配////////////////////////////////////////////////////////////
+
 int temple_image(cv::Mat img)
 {
 	cv::Mat src_image; 
@@ -219,7 +225,7 @@ int temple_image(cv::Mat img)
     cv::Mat result;
 	for (int i = 0; i < 158; ++i){
 		char name[520];
-		std::sprintf(name, "/home/lxl/catkin_ws/src/MonoCamera/template/%d.jpg", i);
+		std::sprintf(name, "/home/nano/px4_ws/src/MonoCamera/template/%d.jpg", i);
 		src_image = cv::imread(name);
 		if (!src_image.data) 
             std::cout << "数字模板库读取失败！" << std::endl; 
@@ -233,7 +239,8 @@ int temple_image(cv::Mat img)
 	return seriesNum;
 }
 
-///////////////////////////////////////////////////////////////订阅+发布////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////订阅＋发布///////////////////////////////////////////////////////////
+
 /*
     (一)订阅飞机位姿:
     (1)话题:  /mavros/local_position/pose
@@ -311,7 +318,9 @@ void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     pub_.publish(obj_output);
 }
 
-////////////////////////////////////////////////////////////////////////主函数//////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////主函数/////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char **argv)
 {
     ros::init(argc,argv,"sub_and_pub");
@@ -319,7 +328,7 @@ int main(int argc, char **argv)
 
     //原始,灰度,hsv,颜色分割图像
     cv::Mat image_raw, image_gray, image_hsv;
-    cv::Mat image_threshold_white1, image_threshold_white2, image_threshold_white;
+    cv::Mat image_threshold_white1,image_threshold_white2, image_threshold_white;
     cv::Mat image_threshold_red1, image_threshold_red2, image_threshold_red;
 
     //启动编号为0的相机
@@ -369,8 +378,10 @@ int main(int argc, char **argv)
                 createTrackbar("High V", NumberDetection, &high_V_white, 255, on_high_V_thresh_trackbar1);
                 
                 //进行颜色分割，输出图像为CV_8UC1
-                cv::inRange(image_hsv, cv::Scalar(low_H_white1, low_S_white, low_V_white), cv::Scalar(high_H_white1,high_S_white,high_V_white), image_threshold_white1);
-                cv::inRange(image_hsv, cv::Scalar(low_H_white2, low_S_white, low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
+                // cv::inRange(image_hsv, cv::Scalar(low_H_white, low_S_white, low_V_white), cv::Scalar(high_H_white,high_S_white,high_V_white), image_threshold_white);
+
+                cv::inRange(image_hsv, cv::Scalar(low_H_white1,low_S_white,low_V_white), cv::Scalar(high_H_white1,high_S_white,high_V_white), image_threshold_white1);
+                cv::inRange(image_hsv, cv::Scalar(low_H_white2,low_S_white,low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
                 cv::bitwise_or(image_threshold_white1, image_threshold_white2, image_threshold_white);
 
                 //形态学运算，先腐蚀erode再膨胀dilate
@@ -447,9 +458,9 @@ int main(int argc, char **argv)
                 roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
                 cv::imshow("resizeRoi", roi);
                 cv::resize(roi, roi, cv::Size(50, 50));
-                cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg", roi);
+                cv::imwrite("/home/nano/px4_ws/src/MonoCamera/roi.jpg", roi);
 
-                roi = cv::imread("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg");
+                roi = cv::imread("/home/nano/px4_ws/src/MonoCamera/roi.jpg");
 
                 //模板匹配识别数字
                 int serise_num;
@@ -629,7 +640,7 @@ int main(int argc, char **argv)
 
                     imshow("image_raw", image_raw);
 
-///////////////////////////////////////////////////////////////////////////////求解空间坐标///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////求解空间坐标////////////////////////////////////////////////////////////////////////////
 // 顶点顺序
 //                         1——2
 //                          |        | 
@@ -915,6 +926,11 @@ int main(int argc, char **argv)
                     //                              (depth[1]+depth[2]+depth[0]+depth[3])/4, 
                     //                              (-Y2_camera-Y3_camera-Y1_camera-Y4_camera)/4;
                     //2. X-前, Y-左, Z-上
+
+                    // Pc_central << (depth[1]+depth[2]+depth[0]+depth[3])/4, 
+                    //                             -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
+                    //                             -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
+
                     Pc_central << (depth[1]+depth[2]+depth[0]+depth[3])/4, 
                                                 -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
                                                 -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
@@ -922,13 +938,12 @@ int main(int argc, char **argv)
 ///////////////////////////////////////////////////////////////////解算世界坐标(回调函数中进行)//////////////////////////////////////////////////////////////////////
                     ros::spinOnce();
 
-                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
+                     std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
                 
-                    std::cout << "目标中心的世界坐标Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
+                    std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
                 }
-
                 else{
-                    cout << "检测到的边框不是矩形!" << endl;
+                    cout << "没有检测到边框!" << endl;
                 }
                 char c = (char)waitKey(25);
 		        if (c == 27)

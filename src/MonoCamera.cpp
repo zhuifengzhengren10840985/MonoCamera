@@ -47,8 +47,11 @@ const cv::String NumberDetection = "Number Detection";
 const cv::String SquareDetection = "Square Detection";
 
 //数字检测的滑动条
-int low_H_white = 0, 
-       high_H_white = 180, 
+int low_H_white1 = 0, 
+       high_H_white1 = 89, 
+
+       low_H_white2 = 90, 
+       high_H_white2 = 180, 
 
        low_S_white = 0, 
        high_S_white = 255, 
@@ -82,16 +85,28 @@ Eigen::Vector3d t_Euler;
 //顶点及中心点的世界坐标
 Eigen::Vector3d P_world1, P_world2, P_world3, P_world4, P_worldcentral;
 
-///////////////////////////////滑动条1///////////////////////////////
-static void on_low_H_thresh_trackbar1(int, void *)
+////////////////////////////////////////////////////////////数字滑动条/////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static void on_low_H1_thresh_trackbar1(int, void *)
 {
-    low_H_white = std::min(high_H_white-1, low_H_white);//防止最大值小于最小值
-	cv::setTrackbarPos("Low H", NumberDetection, low_H_white);
+    low_H_white1 = std::min(high_H_white1-1, low_H_white1);//防止最大值小于最小值
+	cv::setTrackbarPos("Low H1", NumberDetection, low_H_white1);
 }
-static void on_high_H_thresh_trackbar1(int, void *)
+static void on_high_H1_thresh_trackbar1(int, void *)
 {
-    high_H_white = std::max(high_H_white, low_H_white+1);
-	setTrackbarPos("High H", NumberDetection, high_H_white);
+    high_H_white1 = std::max(high_H_white1, low_H_white1+1);
+	setTrackbarPos("High H1", NumberDetection, high_H_white1);
+}
+
+static void on_low_H2_thresh_trackbar1(int, void *)
+{
+    low_H_white2 = std::min(high_H_white2-1, low_H_white2);//防止最大值小于最小值
+	cv::setTrackbarPos("Low H2", NumberDetection, low_H_white2);
+}
+static void on_high_H2_thresh_trackbar1(int, void *)
+{
+    high_H_white2 = std::max(high_H_white2, low_H_white2+1);
+	setTrackbarPos("High H2", NumberDetection, high_H_white2);
 }
 
 static void on_low_S_thresh_trackbar1(int, void *)
@@ -115,7 +130,10 @@ static void on_high_V_thresh_trackbar1(int, void *)
     high_V_white = std::max(high_V_white,low_V_white+1);
 	setTrackbarPos("High V",NumberDetection,high_V_white);
 }
-/////////////////////////////滑动条2///////////////////////////
+
+
+////////////////////////////////////////////////////////////边框滑动条/////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void on_low_H1_thresh_trackbar2(int, void *)
 {
     low_H_red1 = std::min(high_H_red1-1, low_H_red1);//防止最大值小于最小值
@@ -160,7 +178,7 @@ static void on_high_V_thresh_trackbar2(int, void *)
 	setTrackbarPos("High V",SquareDetection,high_V_red);
 }
 
-////////////////////////两幅图像相减////////////////////////
+//////////////////////////////////////////////////////////两幅图像相减////////////////////////////////////////////////////////////////
 cv::Mat substract(cv::Mat &src, cv::Mat&dst){
 	int sum = 0; 
     cv::Mat result = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
@@ -174,7 +192,7 @@ cv::Mat substract(cv::Mat &src, cv::Mat&dst){
 	return result;
 }
 
-//////////////////////////获取数字///////////////////////////
+////////////////////////////////////////////////////////////获取数字////////////////////////////////////////////////////////////////
 int get_One(cv::Mat image){
 	int sum_one = 0;
 	for (int i = 0; i < image.rows; ++i){
@@ -187,7 +205,7 @@ int get_One(cv::Mat image){
     return sum_one;
 }
 
-///////////////////////////模板匹配//////////////////////////
+/////////////////////////////////////////////////////////////模板匹配//////////////////////////////////////////////////////////////
 int temple_image(cv::Mat img)
 {
 	cv::Mat src_image; 
@@ -215,7 +233,7 @@ int temple_image(cv::Mat img)
 	return seriesNum;
 }
 
-//////////////////////////订阅+发布/////////////////////////
+///////////////////////////////////////////////////////////////订阅+发布////////////////////////////////////////////////////////////
 /*
     (一)订阅飞机位姿:
     (1)话题:  /mavros/local_position/pose
@@ -293,7 +311,7 @@ void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     pub_.publish(obj_output);
 }
 
-/********************************************************************主函数**************************************************************************/
+////////////////////////////////////////////////////////////////////////主函数//////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
     ros::init(argc,argv,"sub_and_pub");
@@ -301,7 +319,7 @@ int main(int argc, char **argv)
 
     //原始,灰度,hsv,颜色分割图像
     cv::Mat image_raw, image_gray, image_hsv;
-    cv::Mat image_threshold_white;
+    cv::Mat image_threshold_white1, image_threshold_white2, image_threshold_white;
     cv::Mat image_threshold_red1, image_threshold_red2, image_threshold_red;
 
     //启动编号为0的相机
@@ -338,8 +356,11 @@ int main(int argc, char **argv)
                 namedWindow(NumberDetection, 0);
                 resizeWindow(NumberDetection, 640, 480);
 
-                createTrackbar("Low H", NumberDetection, &low_H_white, 180, on_low_H_thresh_trackbar1);
-                createTrackbar("High H", NumberDetection, &high_H_white, 180, on_high_H_thresh_trackbar1);
+                createTrackbar("Low H1", NumberDetection, &low_H_white1, 89, on_low_H1_thresh_trackbar1);
+                createTrackbar("High H1", NumberDetection, &high_H_white1, 89, on_high_H1_thresh_trackbar1);
+
+                createTrackbar("Low H2", NumberDetection, &low_H_white2, 180, on_low_H2_thresh_trackbar1);
+                createTrackbar("High H2", NumberDetection, &high_H_white2, 180, on_high_H2_thresh_trackbar1);
 
                 createTrackbar("Low S", NumberDetection, &low_S_white, 255, on_low_S_thresh_trackbar1);
                 createTrackbar("High S", NumberDetection, &high_S_white, 255, on_high_S_thresh_trackbar1);
@@ -348,7 +369,9 @@ int main(int argc, char **argv)
                 createTrackbar("High V", NumberDetection, &high_V_white, 255, on_high_V_thresh_trackbar1);
                 
                 //进行颜色分割，输出图像为CV_8UC1
-                cv::inRange(image_hsv, cv::Scalar(low_H_white, low_S_white, low_V_white), cv::Scalar(high_H_white,high_S_white,high_V_white), image_threshold_white);
+                cv::inRange(image_hsv, cv::Scalar(low_H_white1, low_S_white, low_V_white), cv::Scalar(high_H_white1,high_S_white,high_V_white), image_threshold_white1);
+                cv::inRange(image_hsv, cv::Scalar(low_H_white2, low_S_white, low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
+                cv::bitwise_and(image_threshold_white1, image_threshold_white2, image_threshold_white);
 
                 //形态学运算，先腐蚀erode再膨胀dilate
                 cv::Mat image_erode, image_dilate;
@@ -896,17 +919,16 @@ int main(int argc, char **argv)
                                                 -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
                                                 -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
 
-                    
-                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
-
-
 ///////////////////////////////////////////////////////////////////解算世界坐标(回调函数中进行)//////////////////////////////////////////////////////////////////////
                     ros::spinOnce();
+
+                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
                 
-                    std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
+                    std::cout << "目标中心的世界坐标Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
                 }
+                
                 else{
-                    cout << "没有正确检测到边框!" << endl;
+                    cout << "检测到的边框不是矩形!" << endl;
                 }
                 char c = (char)waitKey(25);
 		        if (c == 27)

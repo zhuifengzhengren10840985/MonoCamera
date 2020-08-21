@@ -371,7 +371,7 @@ int main(int argc, char **argv)
                 //进行颜色分割，输出图像为CV_8UC1
                 cv::inRange(image_hsv, cv::Scalar(low_H_white1, low_S_white, low_V_white), cv::Scalar(high_H_white1,high_S_white,high_V_white), image_threshold_white1);
                 cv::inRange(image_hsv, cv::Scalar(low_H_white2, low_S_white, low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
-                cv::bitwise_and(image_threshold_white1, image_threshold_white2, image_threshold_white);
+                cv::bitwise_or(image_threshold_white1, image_threshold_white2, image_threshold_white);
 
                 //形态学运算，先腐蚀erode再膨胀dilate
                 cv::Mat image_erode, image_dilate;
@@ -926,7 +926,7 @@ int main(int argc, char **argv)
                 
                     std::cout << "目标中心的世界坐标Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
                 }
-                
+
                 else{
                     cout << "检测到的边框不是矩形!" << endl;
                 }

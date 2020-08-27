@@ -1,5 +1,7 @@
 
 #include <cmath>
+#include <string>
+#include <fstream>
 #include <iostream>
 #include <ros/ros.h>
 #include <exception> 
@@ -81,7 +83,7 @@ int low_H_red1 = 0,
 Eigen::Vector3d Pc1,Pc2,Pc3, Pc4, Pc_central;
 
 //旋转矩阵3x3
-Eigen::Matrix3d R_Euler;
+Eigen::Matrix3d R_Euler, R_Euler1;
 //平移矩阵3x1
 Eigen::Vector3d t_Euler;
 //欧式变换矩阵4x4
@@ -242,7 +244,88 @@ int temple_image(cv::Mat img)
 }
 
 
-////////////////////////////////////////////////////////////订阅＋发布///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////四元数－>欧拉角//////////////////////////////////////////////////////////////////////
+struct Quaternion {
+    double w, x, y, z;
+};
+ 
+struct EulerAngles {
+    double roll, pitch, yaw;
+};
+ 
+EulerAngles ToEulerAngles(Quaternion q) {
+    EulerAngles angles;
+
+    // roll (X轴旋转)
+    double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+    double cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+    angles.roll = std::atan2(sinr_cosp, cosr_cosp);
+ 
+    // pitch (Ｙ轴旋转)
+    double sinp = 2 * (q.w * q.y - q.z * q.x);
+    if (std::abs(sinp) >= 1)
+        angles.pitch = std::copysign(M_PI / 2, sinp); 
+    else
+        angles.pitch = std::asin(sinp);
+ 
+    // yaw (Ｚ轴旋转)
+    double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+    double cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+    angles.yaw = std::atan2(siny_cosp, cosy_cosp);
+ 
+    return angles;
+}
+
+
+///////////////////////////////////////////////////////////////////////////四元数－>旋转矩阵//////////////////////////////////////////////////////////////////////
+Eigen::Matrix3d QuaToRotationMatrix(Quaternion q){
+    double R11, R12, R13, R21, R22, R23, R31, R32, R33;
+
+    R11 = 1 - 2 *q. y * q.y  - 2 * q.z * q.z;
+    R12 = 2 * q.x * q.y + 2 * q.w * q.z;
+    R13 = 2 * q.x *q.z - 2 * q.w * q.y;
+
+    R21 = 2 * q.x * q.y - 2 * q.w * q.z;
+    R22 = 1 - 2 * q.x * q.x - 2 * q.z * q.z;
+    R23 = 2 * q.y * q.z + 2 * q.w * q.x;
+
+    R31 = 2 * q.x * q.z + 2 * q.w * q.y;
+    R32 = 2 * q.y * q.z - 2 * q.w * q.x;
+    R33 = 1 - 2 * q.x * q.x - 2 * q.y * q.y;
+
+    Eigen::Matrix3d R;
+    R << R11, R12, R13,
+              R21, R22, R23,
+              R31, R32, R33;
+    return R;
+}
+
+
+////////////////////////////////////////////////////////////////////////////欧拉角－>旋转矩阵//////////////////////////////////////////////////////////////////
+Eigen::Matrix3d EulerToRotationMatrix(EulerAngles angles){
+    Eigen::Matrix3d Rx_, Ry_, Rz_, Rzyx_;
+    double setaX = angles.roll;
+    double setaY = angles.pitch;
+    double setaZ = angles.yaw;
+
+    Rx_ << 1, 0, 0, 
+                  0, cos(setaX), -sin(setaX), 
+                  0,sin(setaX), cos(setaX);
+    
+    Ry_ << cos(setaY),0,sin(setaY), 
+                  0, 1, 0, 
+                  -sin(setaY),0,cos(setaY);
+
+    Rz_ << cos(setaZ),-sin(setaZ),0, 
+                  sin(setaZ),cos(setaZ), 0, 
+                  0, 0,1;
+
+    Rzyx_ << Rz_ * Ry_ * Rx_;
+
+    return Rzyx_;
+}
+
+//////////////////////////////////////////////////////////////////////////////订阅＋发布////////////////////////////////////////////////////////////////////////
 
 /*
     (一)订阅飞机位姿:
@@ -286,28 +369,30 @@ SubAndPub::SubAndPub()
 void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     //四元数
-    Eigen::Quaterniond Q;
-    Q.x() = msg->pose.orientation.x;
-    Q.y() = msg->pose.orientation.y;
-    Q.z() = msg->pose.orientation.z;
-    Q.w() = msg->pose.orientation.w;
+    Quaternion Q;
+    Q.x = msg->pose.orientation.x;
+    Q.y = msg->pose.orientation.y;
+    Q.z = msg->pose.orientation.z;
+    Q.w = msg->pose.orientation.w;
 
-    //通过coeffs()函数按照x,y,z,w顺序打印成员,可以通过vec()打印虚部x,y,z
-    std::cout << "四元数 x y z w:\n " << Q.coeffs() << std::endl;
+    EulerAngles angles = ToEulerAngles(Q);
 
-    //平移矩阵(需要统一单位为cm,无人机坐标单位是m,所以这里要乘以100)
-    t_Euler << msg->pose.position.x*100, 
-                          msg->pose.position.y*100, 
-                          msg->pose.position.z*100;
+    std::cout << "EulerAngles: " << angles.roll << " " << angles.pitch << " " << angles.yaw << endl;
+
+    R_Euler = EulerToRotationMatrix(angles);
+
+    std::cout << "RotationMatrix: " << R_Euler << endl; 
+
+    R_Euler1 = QuaToRotationMatrix(Q);
+    std::cout << "RotationMatrix1: " << R_Euler1 << endl; 
+
+    t_Euler << msg->pose.position.x * 100,
+                          msg->pose.position.y * 100,
+                          msg->pose.position.z * 100;
     
-    std::cout << "平移矩阵:\n" << t_Euler << std::endl;
+    std::cout << "t_Euler:(" << t_Euler[0] << "," << t_Euler[1] << "," <<t_Euler[2] << ")" <<endl;
 
-    //Tcw（world->camera）
-    Tcw.rotate(Q);
-    Tcw.pretranslate(t_Euler);
-
-    //求中心点的世界坐标 Pw = Twc * Pc = Tcw的逆 * Pc
-    P_worldcentral =Tcw.inverse()*Pc_central;
+    P_worldcentral = R_Euler.inverse() * Pc_central + t_Euler;
 
     //初始化MonoCamera::object类型的消息
     MonoCamera::object obj_output;
@@ -317,6 +402,26 @@ void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     obj_output.object_position.z = P_worldcentral[2];
     //发布者发布消息
     pub_.publish(obj_output);
+}
+
+
+//////////////////////////////////////////////////////////////////将数据写入到txt文件中///////////////////////////////////////////////////////////////
+void writeData(){
+    //在当前目录下新建一个txt文件
+    ofstream outfile;
+    //打开文件
+    outfile.open("/home/lxl/catkin_ws/src/MonoCamera/ObjPos.txt", std::ios::app);
+
+    //如果读取txt文件失败，就打印提示信息
+    if(!outfile){
+        std::cout << "TXT文件读取失败！" << endl;
+    }
+    
+    //将数据写入txt文件
+    outfile << Pc_central[0] << "\t" << Pc_central[1] << "\t" << Pc_central[2] << "\n";
+
+    //关闭文件
+    outfile.close();
 }
 
 
@@ -334,8 +439,10 @@ int main(int argc, char **argv)
 
     //启动编号为0的相机
     cv::VideoCapture cap(0);
+    //设置图像的长宽和帧率
     cap.set(CV_CAP_PROP_FRAME_WIDTH,640);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT,480); 
+    cap.set(CV_CAP_PROP_FPS, 25);
     while(ros::ok())
     {
         if(!cap.isOpened())
@@ -932,24 +1039,31 @@ int main(int argc, char **argv)
                     //                             -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
                     //                             -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
 
-                    Pc_central << (depth[1]+depth[2]+depth[0]+depth[3])/4, 
-                                                -(X1_camera+X4_camera+X2_camera+X3_camera)/4, 
-                                                -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;
+                    Pc_central << (depth[1]+depth[2]+depth[0]+depth[3])/4, //正前方
+                                                -(X1_camera+X4_camera+X2_camera+X3_camera)/4,//左方
+                                                -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;//正上方
 
 ///////////////////////////////////////////////////////////////////解算世界坐标(回调函数中进行)//////////////////////////////////////////////////////////////////////
                     ros::spinOnce();
 
-                     std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
+                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
                 
-                    std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";
+                    std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";   
                 }
+
                 else{
-                    cout << "没有检测到边框!" << endl;
+                    cout << "未检测到边框!" << endl;
+                    Pc_central << 0, 0, 0;
+                    P_worldcentral << 0, 0, 0;
                 }
+
                 char c = (char)waitKey(25);
 		        if (c == 27)
 			    break;
-                cv::waitKey(1);      
+                cv::waitKey(1); 
+
+                //将数据写入txt文件
+                writeData();  
             }
         }
 

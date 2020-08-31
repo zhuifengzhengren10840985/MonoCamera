@@ -44,6 +44,8 @@ const int N2 = 2 * J_N;
 double depth[J_N] = {300,300,300,300};
 //牛顿迭代的初值(深度Z的初值)
 double x_start[J_N] = {300,300,300,300};
+//检测到目标的标志位
+bool isDetected = false;
 
 //窗口名称
 const cv::String window_capture_name = "Video Capture";
@@ -363,7 +365,10 @@ SubAndPub::SubAndPub()
     //指定发布者往object_pub这个话题上发布MonoCamera::object类型的数据
     pub_ = nh_.advertise<MonoCamera::object>("object_pub", 1);
     //指定订阅者从/mavros/local_position/pose这个话题上订阅geometry_msgs::PoseStamped类型的数据
-    sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, &SubAndPub::poseCallback, this);//话题前面不加/表示相对命名空间,加了表示全局命名空间
+    sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 
+                                                                                                                        10, 
+                                                                                                                        &SubAndPub::poseCallback, 
+                                                                                                                        this);//话题前面不加/表示相对命名空间,加了表示全局命名空间
 }
 //订阅无人机位姿信息的回调函数,利用这些信息求出目标世界坐标,将目标信息发布出去
 void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -396,6 +401,7 @@ void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     //初始化MonoCamera::object类型的消息
     MonoCamera::object obj_output;
+    obj_output.isDetected = isDetected;
     obj_output.object_number = number;
     obj_output.object_position.x = P_worldcentral[0];
     obj_output.object_position.y = P_worldcentral[1];
@@ -405,7 +411,7 @@ void SubAndPub::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 }
 
 
-//////////////////////////////////////////////////////////////////将数据写入到txt文件中///////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////将数据记录到txt文件中///////////////////////////////////////////////////////////////
 void writeData(){
     //在当前目录下新建一个txt文件
     ofstream outfile;
@@ -418,7 +424,7 @@ void writeData(){
     }
     
     //将数据写入txt文件
-    outfile << Pc_central[0] << "\t" << Pc_central[1] << "\t" << Pc_central[2] << "\n";
+    outfile << Pc_central[0] << "\t" << Pc_central[1] << "\t" << Pc_central[2] << "\t" << P_worldcentral[0] << "\t" << P_worldcentral[1] << "\t" << P_worldcentral[2]<< "\n";
 
     //关闭文件
     outfile.close();
@@ -688,6 +694,9 @@ int main(int argc, char **argv)
                 cv::Point min_Point1, min_Point2, min_Point3, min_Point4, min_central;
                 //首先判断是否有四个角点
                 if(squareFour.size() == 4){
+                    //检测标志位设置为true
+                    isDetected = true;
+
                     //四个顶点
                     vector<point2D> vertex;
                     for(int i =0; i < 4; i++){
@@ -1052,7 +1061,9 @@ int main(int argc, char **argv)
                 }
 
                 else{
+                    isDetected = false;
                     cout << "未检测到边框!" << endl;
+
                     Pc_central << 0, 0, 0;
                     P_worldcentral << 0, 0, 0;
                 }

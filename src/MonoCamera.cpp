@@ -18,6 +18,8 @@
 using namespace cv;
 using namespace std;
 
+#define wideRoi 10
+
 //像素坐标自定义结构体
 struct point2D
 {
@@ -431,12 +433,25 @@ void writeData(){
 }
 
 
+//////////////////////////////////////////////////////////////////////计算时间周期////////////////////////////////////////////////////////////////////
+float getDeltaTime(const ros::Time& _lastTime){
+    ros::Time current_time = ros::Time::now();
+    float current_time_sec = current_time.sec - _lastTime.sec;
+    float current_time_nsec = current_time.nsec / 1e9 - _lastTime.nsec / 1e9;
+    return (current_time_sec + current_time_nsec);
+}
+
+
 /////////////////////////////////////////////////////////////////////主函数/////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv)
 {
     ros::init(argc,argv,"sub_and_pub");
-    SubAndPub SAPObject;
+    ros::NodeHandle nh;
+
+    ros::Publisher pub = nh.advertise<MonoCamera::object>("object_pub", 1);
+    ros::Rate loop_rate(10);//消息发布的频率为1Hz
+    // SubAndPub SAPObject;
 
     //原始,灰度,hsv,颜色分割图像
     cv::Mat image_raw, image_gray, image_hsv;
@@ -448,7 +463,8 @@ int main(int argc, char **argv)
     //设置图像的长宽和帧率
     cap.set(CV_CAP_PROP_FRAME_WIDTH,640);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT,480); 
-    cap.set(CV_CAP_PROP_FPS, 25);
+    cap.set(CV_CAP_PROP_FPS, 50);
+
     while(ros::ok())
     {
         if(!cap.isOpened())
@@ -473,7 +489,6 @@ int main(int argc, char **argv)
                 //颜色空间转换
                 cv::cvtColor(image_raw, image_hsv, cv::COLOR_BGR2HSV);  
 
-
 /////////////////////////////////////////////////////////////////////检测数字区域/////////////////////////////////////////////////////////////////////////
                 //数字检测HSV阈值调节窗口
                 namedWindow(NumberDetection, 0);
@@ -492,7 +507,7 @@ int main(int argc, char **argv)
                 createTrackbar("High V", NumberDetection, &high_V_white, 255, on_high_V_thresh_trackbar1);
                 
                 //进行颜色分割，输出图像为CV_8UC1
-                // cv::inRange(image_hsv, cv::Scalar(low_H_white, low_S_white, low_V_white), cv::Scalar(high_H_white,high_S_white,high_V_white), image_threshold_white);
+                // cv::inRange(image_hsv, cv::Scalar(0, 0, 221), cv::Scalar(180,30,255), image_threshold_white);
 
                 cv::inRange(image_hsv, cv::Scalar(low_H_white1,low_S_white,low_V_white), cv::Scalar(high_H_white1,high_S_white,high_V_white), image_threshold_white1);
                 cv::inRange(image_hsv, cv::Scalar(low_H_white2,low_S_white,low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
@@ -570,7 +585,7 @@ int main(int argc, char **argv)
                 //抠取出数字区域的二值图像
                 cv::Mat roi;
                 roi = image_dilate(cv::Rect(srcRect[0].x, srcRect[0].y, srcRect[0].width, srcRect[0].height));
-                cv::imshow("resizeRoi", roi);
+                //cv::imshow("resizeRoi", roi);
                 cv::resize(roi, roi, cv::Size(50, 50));
                 cv::imwrite("/home/lxl/catkin_ws/src/MonoCamera/roi.jpg", roi);
 
@@ -619,9 +634,39 @@ int main(int argc, char **argv)
                 // cv::inRange(image_hsv, cv::Scalar(0, 43, 46), cv::Scalar(10, 255, 255), image_threshold_red1);
                 // cv::inRange(image_hsv, cv::Scalar(156, 43, 46), cv::Scalar(180, 255, 255), image_threshold_red2);
                 // cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
+
                 cv::inRange(image_hsv, cv::Scalar(low_H_red1,low_S_red,low_V_red), cv::Scalar(high_H_red1,high_S_red,high_V_red), image_threshold_red1);
                 cv::inRange(image_hsv, cv::Scalar(low_H_red2,low_S_red,low_V_red), cv::Scalar(high_H_red2,high_S_red,high_V_red), image_threshold_red2);
                 cv::bitwise_or(image_threshold_red1, image_threshold_red2, image_threshold_red);
+
+                int roi_wid = abs(rect1[1].x - rect1[0].x);//方形ROI区域边长
+                int min_x = std::min({rect1[0].x, rect1[1].x, rect1[2].x, rect1[3].x});
+                int min_y = std::min({rect1[0].y, rect1[1].y, rect1[2].y, rect1[3].y});
+                int max_x = std::max({rect1[0].x, rect1[1].x, rect1[2].x, rect1[3].x});
+                int max_y = std::max({rect1[0].y, rect1[1].y, rect1[2].y, rect1[3].y});
+                /*同时满足以下条件：
+                         roi.x >= 0
+                         roi.y >= 0
+                         roi.width >= 0
+                         roi.height >= 0
+                         roi.x + roi.width <= m.cols 
+                         roi.y + roi.height <= m.rows
+                */
+                cv::Mat image_roi;//屏蔽掉非ROI区域后的图像
+
+                if((min_x - wideRoi) >= 0 && (min_y - wideRoi) >= 0 && roi_wid >=0 && (max_x + wideRoi) < image_raw.cols  && (max_y + wideRoi) < image_raw.rows){
+                    cv::Rect roi_rect(rect1[0].x - wideRoi, rect1[0].y - wideRoi, roi_wid + 20, roi_wid + 20); //方形ROI区域(超出图像会报错)
+                    cv::Mat mask = cv::Mat::zeros(image_threshold_red.size(), CV_8UC1);//非ROI区域－＆0－屏蔽掉不感兴趣的区域
+                    mask(roi_rect).setTo(255);//ROI区域－＆1－保留住感兴趣的区域
+                    // cv::imshow("mask", mask);
+
+                    image_threshold_red.copyTo(image_roi, mask);//原图与mask图进行与运算
+                    cv::imshow("ROI", image_roi);
+                }
+                else{
+                    image_roi = image_threshold_red;
+                }
+
 
                 //形态学运算，先腐蚀(erode)再膨胀(dilate)
                 cv::Mat image_erode1, image_dilate1;
@@ -682,6 +727,7 @@ int main(int argc, char **argv)
 		        std::vector<cv::Point> squareFour;//四个角点
 		        convexHull(contourPoly[0], squareFour, true, true);
                 //cout << "顶点个数为：" << squareFour.size() << endl;
+
 
 ///////////////////////////////////////////////////////////////////////////////对角点进行排序/////////////////////////////////////////////////////////////////////////////
 //顶点顺序
@@ -1014,7 +1060,7 @@ int main(int argc, char **argv)
                     depth[1]=fabs(depth[1]);
                     depth[2]=fabs(depth[2]);
                     depth[3]=fabs(depth[3]);
-                    std::cout<<"深度：P1 " << depth[0] << " P2 " << depth[1] << " P3 " << depth[2] << " P4 " << depth[3] << "cm" <<std::endl;
+                    // std::cout<<"深度：P1 " << depth[0] << " P2 " << depth[1] << " P3 " << depth[2] << " P4 " << depth[3] << "cm" <<std::endl;
 
                     //X--与u同向--右方
                     //Y--与v同向--下方
@@ -1053,24 +1099,30 @@ int main(int argc, char **argv)
                                                 -(Y2_camera+Y3_camera+Y1_camera+Y4_camera)/4;//正上方
 
 ///////////////////////////////////////////////////////////////////解算世界坐标(回调函数中进行)//////////////////////////////////////////////////////////////////////
-                    ros::spinOnce();
-
-                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm"<< std::endl;
+                    std::cout << "目标中心的相机坐标Pc:  (" << Pc_central[0] << ",  " << Pc_central[1] << ",  " << Pc_central[2] << ")cm\n\n"; 
                 
-                    std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";   
+                    // std::cout << "目标中心的世界坐标 Pw: (" << P_worldcentral[0] << ", " << P_worldcentral[1] << ", " << P_worldcentral[2] << ")cm\n\n";   
                 }
 
                 else{
                     isDetected = false;
                     cout << "未检测到边框!" << endl;
-
-                    Pc_central << 0, 0, 0;
-                    P_worldcentral << 0, 0, 0;
                 }
+
+                 //初始化MonoCamera::object类型的消息
+                MonoCamera::object obj_msg;
+                obj_msg.isDetected = isDetected;
+                obj_msg.object_number = number;
+                obj_msg.object_position.x = Pc_central[0];
+                obj_msg.object_position.y = Pc_central[1];
+                obj_msg.object_position.z = Pc_central[2];
+                //发布者发布消息
+                pub.publish(obj_msg);
+                loop_rate.sleep();
 
                 char c = (char)waitKey(25);
 		        if (c == 27)
-			    break;
+			        break;
                 cv::waitKey(1); 
 
                 //将数据写入txt文件
@@ -1082,9 +1134,7 @@ int main(int argc, char **argv)
             std::cout<<"发生错误"<<std::endl;
             std::cout << e.what() << std::endl;  
         }
-
         cap.release();
     }     
     return 0;
-
 }

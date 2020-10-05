@@ -558,10 +558,17 @@ int main(int argc, char **argv){
             //相机的内参矩阵(3x3)
             Eigen::Matrix3d CameraM;
             Eigen::Vector4d CameraPram;
-            CameraPram[0] = 366.997006;//fx
-            CameraPram[1] = 366.447492;//fy
-            CameraPram[2] = 331.133147;//cx
-            CameraPram[3] = 239.626159;//cy
+            //相机１
+            // CameraPram[0] = 366.997006;//fx
+            // CameraPram[1] = 366.447492;//fy
+            // CameraPram[2] = 331.133147;//cx
+            // CameraPram[3] = 239.626159;//cy
+            //宽动态相机２
+            CameraPram[0] = 426.858887;//fx
+            CameraPram[1] = 425.608119;//fy
+            CameraPram[2] = 319.148447;//cx
+            CameraPram[3] = 232.314130;//cy
+
             CameraM << CameraPram[0], 0, CameraPram[2], 0, CameraPram[1], CameraPram[3], 0, 0, 1;
 
             //相机归一化坐标（Xc/Zc, Yc/Zc)T =  相机内参矩阵的逆 *(u, v)T
@@ -838,7 +845,7 @@ int main(int argc, char **argv){
             cv::inRange(image_hsv, cv::Scalar(low_H_white2,low_S_white,low_V_white), cv::Scalar(high_H_white2,high_S_white,high_V_white), image_threshold_white2);
             cv::bitwise_or(image_threshold_white1, image_threshold_white2, image_threshold_white);
 
-            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(2, 2));
+            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(4, 4));
             cv::erode(image_threshold_white, image_erode, kernel);
             cv::dilate(image_erode, image_dilate, kernel);
             cv::imshow(NumberDetection, image_dilate);
